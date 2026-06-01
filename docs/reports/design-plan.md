@@ -81,7 +81,9 @@ The goal of the development of this pipeline is to create a reference database o
 
 **Deliverable:**
 
-- A design plan documenting the current process
+- A design plan documenting the current process and architectural design record containing current tools, strengths, limitations, etc.
+
+**Notes:** Current workflow looks like `fastp` → `GetOrganelle` → `MitoZ`. A complete diagrammatic workflow of Richa Patel's pipeline can be found [here](https://ecommons.luc.edu/cgi/viewcontent.cgi?article=2463&context=ures).
 ```{=typst}
 ]
 ```
