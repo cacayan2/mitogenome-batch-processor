@@ -1,14 +1,11 @@
 ```{=typst}
 #set page(margin: (x:0.5in, y:0.5in))
 #show link: set text(fill: blue)
-```
-
-```{=typst}
 #align(center)[
-```
-# Mitochondrial Genome Processing Pipeline
-## Emil Cacayan
-```{=typst}
+
+    = Mitochondrial Genome Processing Pipeline
+    == Emil Cacayan
+
 ]
 ```
 ---
@@ -52,7 +49,7 @@ Ecologically, this river serves a few essential functions:
 
 **2. Refuge for Threatened Freshwater Mussels:**
 
-<br><small>The Illinois Fox River basin is globally significant for its biodiversity of native fresthwater mussels (supporting 24 to 32 distinct species) (Schanzle et al., 2004). Millions of these mussels act as a natural filter for bacteria and algae (up to 10 gallons of water a day) cleaning the water column (Black et al., 2017). The reproductive cycle of these species are quite complex, many requiring larvae to attach to the gills of native fish to grow (Rock et al., 2022). The Fox River provides the multi-species environment for this fragile paradigm to survive - many of these fish species being threatened (such as the Plain Pocketbook, Elktoe, and White Heelsplitter) (Altenritter & Casper, 2018; Shasteen et al., 2013; Limpers 2022). </br></small>
+<br><small>The Illinois Fox River basin is globally significant for its biodiversity of native freshwater mussels (supporting 24 to 32 distinct species) (Schanzle et al., 2004). Millions of these mussels act as a natural filter for bacteria and algae (up to 10 gallons of water a day) cleaning the water column (Black et al., 2017). The reproductive cycle of these species are quite complex, many requiring larvae to attach to the gills of native fish to grow (Rock et al., 2022). The Fox River provides the multi-species environment for this fragile paradigm to survive - many of these fish species being threatened (such as the Plain Pocketbook, Elktoe, and White Heelsplitter) (Altenritter & Casper, 2018; Shasteen et al., 2013; Limpers 2022). </br></small>
 
 **3. Native Fishery:**
 
@@ -155,6 +152,7 @@ Develop procedures for:
 - Figure generation
 
 **Deliverable:**
+
 - Reproducible phylogenetic analysis
 ```{=typst}
 ]
@@ -212,7 +210,7 @@ Generate standardized Markdown reports documenting:
 - Reduced manual effort for future projects
 - Standardized outputs across species
 - Automated report generation
-- Foudnation for large-scale mitogenome processing
+- Foundation for large-scale mitogenome processing
 
 ---
 
