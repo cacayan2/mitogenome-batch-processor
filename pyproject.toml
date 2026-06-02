@@ -1,0 +1,20 @@
+[project]
+name = "mitopipeline"
+version = "0.1.0"
+description = "Automated mitochondrial genome assembly, annotation, and reporting pipeline"
+requires-python = ">=3.11"
+
+dependencies = [
+    "pandas",
+    "biopython",
+    "pytest"
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
