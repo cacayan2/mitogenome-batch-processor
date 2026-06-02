@@ -148,6 +148,7 @@ Investigate automated generation of:
 ### Goal 5: Automate Phylogenetic Analysis
 
 Develop procedures for: 
+
 - Reference sequence retrieval
 - Sequence alignment
 - Tree construction
