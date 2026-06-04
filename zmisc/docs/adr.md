@@ -392,7 +392,7 @@ In addition to the aforementioned layers, much of the philosophy behind the desi
 - `API`: With this object, we standardize what an API is allowed to do and set a contract on the expected behavior of a tool.
 - `Sample`: A sample object would ideally represent a single sample. For the lifetime of the pipeline, this object would retain information such as repository location, name, etc. 
 - `PipelineJob`: A pipeline job would represent one full pipeline run and would store statistics, manage outputs, etc.
-- `CommandResult`: 
+- `CommandResult`: Following the output of a command, associated behavior and variables will be stored in a separate object - this standardizes the output validation process. 
 
 ## Justifications
 ### Workflow Orchestration
@@ -438,6 +438,8 @@ Detailed execution information will be recorded to persistent log files, includi
 - Exception/stack traces and failure diagnostics
 
 This approach significantly improves usability during execution while preserved detailed information necessary for debugging, reproducibility, and post-run auditing. The resulting logs will provide sufficient information to reconstruct execution history and diagnose failures without overwhelming users with excessive terminal output. 
+
+Object-oriented design was pulled from previous experience with Java and C++ and allows for a modular and easily interpretable reverse-engineering process for future developers. This allows for ease of adding future tool API's (should newer or better tools be found to suit the problem) and streamlines development process by codifying contracts of expected behavior for different entities in the pipeline. While Python's interpreted nature allows for easier *ad hoc* pipeline building, integrating object-oriented design principles elevate this project from a single application to a generalized pipeline that could even be adapted outside of generating mitochondrial genomes. 
 
 ---
 
