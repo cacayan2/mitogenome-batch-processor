@@ -365,7 +365,7 @@ A centralized logging framework will be implemented to separate user-facing prog
 
 The resulting architecture consists of three primary layers:
 
-![Workflow Architecture Diagram](images/workflow_figure.png)
+![Workflow Architecture Diagram, Created with Canva](images/workflow_figure.png)
 
 **1. Workflow Orchestration Layer (Snakemake)**
 
