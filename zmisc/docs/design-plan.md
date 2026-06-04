@@ -10,6 +10,10 @@
 ```
 ---
 
+```{=typst}
+#outline()
+```
+
 ## Project Objective 
 The goal of this project is the development of a pipeline which will batch process and assemble raw reads of mitochondrial dna into completed mitogenomes that comprise a reference database for fish species along the Fox River. This reference database would ideally then be published to NCBI GenBank and compiled into a microbiology resource announcement. 
 

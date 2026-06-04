@@ -1,3 +1,9 @@
+"""test_imports.py
+
+Unit tests for package imports within the project.
+
+"""
+
 def test_package_imports():
     """Unit test verifies that repo is set up correctly and that imports work as expected."""
     # Importing all associated packages into python.

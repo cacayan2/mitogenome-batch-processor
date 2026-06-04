@@ -11,7 +11,7 @@
 
 ---
 
-# 1. Executive Summary and Project Goals
+# Executive Summary and Project Goals
 ## Project Objective 
 The goal of this project is the development of a pipeline which will batch process and assemble raw reads of mitochondrial dna into completed mitogenomes that comprise a reference database for fish species along the Fox River. This reference database would ideally then be published to NCBI GenBank and compiled into a microbiology resource announcement. 
 
@@ -216,7 +216,21 @@ Generate standardized Markdown reports documenting:
 
 ---
 
-# 2. Data Sources
+
+# Arhitectural Design Record (ADR)
+## Context and Technology Choice
+An architectural design record (ADR) is a document that outlines components, processes, tools, and design justifications for the development of software or system. The goal is to maintain transparency, reproducibility, and maintainability of created software or system. It serves as a starting point for discussions and decisions particularly for collaborative types of projects or projects that will continue development into the future. An entry for this  follows this format:
+
+- [Section Title (Usually A Step or Choice in Workflow Development)]
+    + Context and Technology Choice
+    + Justifications
+
+## Justifications
+This project was written in the context that it would be reused again in the future, whether to generate new mitogenomes or further development as tools improve or larger tasks evolve, so more robust documentation than that provided with a user manual and in-code commenting would further improve the project to this end. An architectural design record shows the thought process behind the code that ended up in the project, ensuring that both users and future developers understand the logic behind decisions made.
+
+---
+
+# Data Sources
 At the time of development, two primary sequencing datasets are available on the laboratory workstation and will serve different purposes throughout the project lifecycle. 
 
 ## Pilot Dataset (`mitogenome_extra`)
@@ -234,7 +248,7 @@ The long-term objective of the project is the generation of a curated mitochondr
 
 ---
 
-# 3. Overall Workflow Design
+# Overall Workflow Design
 ## Context and Technology Choice
 The pipeline follows a sequential mitochondrial genome processing workflow beginning with raw paired-end sequencing reads and ending with visualization and summary reports. The selected workflow consists of five primary stages:
 
@@ -275,7 +289,7 @@ This staged design promotes modularity, reproducibility, and scalability. Indivi
 
 ---
 
-# 4. Pipeline Workflow Management, Tool API, and Error Logging
+# Pipeline Workflow Management, Tool API, Object Oriented-Style, and Error Logging
 ## Context and Technology Choice
 The pipeline will be orchestrated using [`Snakemake`](https://snakemake.readthedocs.io/en/stable/) as the workflow management system. Individual bioinformatics tools will not be invoked directly from workflow definitions. Instead, each tool will be accessed through a dedicated Python API layer responsible for command construction, parameter validation, execution, and result reporting.
 
@@ -303,6 +317,14 @@ The resulting architecture consists of three primary layers:
 - Captures execution events and runtime metrics.
 - Records tool commands, outputs, warnings, and errors.
 - Provides user-friendly progress reporting while preserving detailed diagnostic information.
+- This will be done with the creation of a logging object via the `logging` module. This is stored in `src/mitopipeline/logging` and multiple sanity checks are in place to ensure appropriate use of logging objects.
+
+In addition to the aforementioned layers, much of the philosophy behind the design of each individual code will be drawn from object-oriented design. Objects will be made for the following: 
+
+- `API`: With this object, we standardize what an API is allowed to do and set a contract on the expected behavior of a tool.
+- `Sample`: A sample object would ideally represent a single sample. For the lifetime of the pipeline, this object would retain information such as repository location, name, etc. 
+- `PipelineJob`: A pipeline job would represent one full pipeline run and would store statistics, manage outputs, etc.
+- `CommandResult`: 
 
 ## Justifications
 ### Workflow Orchestration
@@ -351,7 +373,7 @@ This approach significantly improves usability during execution while preserved 
 
 ---
 
-# 5. Quality Control
+# Quality Control
 ## Context and Technology Choice
 The first stage of the pipeline consists of quality assessment of raw sequencing reads using FastQC. All paired-end FASTQ files will undergo quality analysis prior to any trimming, filtering, or assembly operations.
 
@@ -368,7 +390,7 @@ Performing quality assessment before trimming preserves information about the or
 
 ---
 
-# 6. Read Trimming and Filtering
+# Read Trimming and Filtering
 ## Context and Technology Choice
 Following quality assessment, sequencing reads will undergo preprocessing using `fastp`. This stage is responsible for removing low-quality sequence data and correcting common sequencing artifacts prior to mitochondrial genome assembly. 
 
@@ -391,7 +413,7 @@ Retention of both pre-processing and post-processing quality metrics allows effe
 
 ---
 
-# 7. Assembly 
+# Assembly 
 ## Context/Technology Choice
 Following quality control and read preprocessing, mitochondrial genome assembly will be performed using `GetOrganelle`. `GetOrganelle` is a specialized assembly tool designed for the resconstruction of organellar genomes, such as mitochondrial and chloroplast genomes, from short-read sequencing data.
 
@@ -414,7 +436,7 @@ By isolating assembly as a dedicated workflow stage, the pipeline maintains flex
 
 ---
 
-# 8. Genome Annotation, Visualization, and Phylogenetic Comparisons
+# Genome Annotation, Visualization, and Phylogenetic Comparisons
 ## Context/Technology Choice
 Following mitochondrial genome assembly, assembled sequences will undergo annotation using `MITOS2`. Annotation results will then be used to generate mitochondrial genome visualizations and support phylogenetic comparison against closely related species.
 
@@ -439,7 +461,7 @@ The combination of annotation, visualization, and phylogenetic validation transf
 
 ---
 
-# 9. Statistics Generation of Assembled Genomes
+# Statistics Generation of Assembled Genomes
 The final stage of the pipeline will generate structured summary statistics for each assembled mitogenome and compile these results into a centralized table. Summary metrics will be collected form outputs produced throughout the workflow, including quality-control reports, trimming reports, assembly outputs, annotation files, and phylogenetic comparison results.
 
 The statistics generation stage will produce machine-readable outputs such as `.csv` or `.tsv` files. These files will serve as a centralized summary of pipeline execution and biological results across all processed species.
@@ -481,7 +503,7 @@ By treating statistics generation as a formal workflow stage rather than an info
 
 ---
 
-# [Insert Number Here] References
+# References
 Altenritter, M., & Casper, A. F. (2018, September 24). Evaluating the potential responses of native fish and mussels to proposed separation of Lake Michigan from the Illinois River Waterway at Brandon Road Lock and Dam. https://www.researchgate.net/publication/327845663_Evaluating_the_potential_responses_of_native_fish_and_mussels_to_proposed_separation_of_Lake_Michigan_from_the_Illinois_River_Waterway_at_Brandon_Road_Lock_and_Dam
 
 Baldwin, C. (2026, April 6). Watershed | Fox Waterway Agency. Fox Waterway Agency. https://foxwaterway.com/watershed/
