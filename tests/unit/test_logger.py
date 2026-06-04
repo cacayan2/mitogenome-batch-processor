@@ -51,13 +51,13 @@ def test_logger():
     assert len(logger1.handlers) == 2 # Asserting that the logger has only two handlers.
     assert len(logger2.handlers) == 2 # Asserting that the logger has only two handlers.
     
-    assert logger1.handlers[0].level == logging.INFO # Asserting that the logger has a debug level handler.
-    assert logger2.handlers[0].level == logging.INFO # Asserting that the logger has a debug level handler.
-    assert logger1.handlers[1].level == logging.DEBUG # Asserting that the logger has a debug level handler.
-    assert logger2.handlers[1].level == logging.DEBUG # Asserting that the logger has a debug level handler.
+    assert logger1.handlers[0].level == logging.INFO # Asserting that the console logger has a debug level handler.
+    assert logger2.handlers[0].level == logging.INFO # Asserting that the console logger has a debug level handler.
+    assert logger1.handlers[1].level == logging.DEBUG # Asserting that the file logger has a debug level handler.
+    assert logger2.handlers[1].level == logging.DEBUG # Asserting that the file logger has a debug level handler.
 
     assert logger1.handlers[0] == logger2.handlers[0] # Asserting that the logger has the same handler.
 
-    
+    shutil.rmtree(Path("logtest_tmp"))
 
 

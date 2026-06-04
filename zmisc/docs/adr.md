@@ -11,6 +11,20 @@
 
 ---
 
+# Table of Contents
+1. [Executive Summary and Project Goals](#executive-summary-and-project-goals)
+2. [Architectural Design Record (ADR)](#arhitectural-design-record-adr)
+3. [Repository Structure and Project Design](#repository-structure-and-project-design)
+4. [Data Sources](#data-sources)
+5. [Overall Workflow Design](#overall-workflow-design)
+6. [Pipeline Workflow Management, Tool API, Object Oriented-Style, and Error Logging](#pipeline-workflow-management-tool-api-object-oriented-style-and-error-logging)
+7. [Quality Control](#quality-control)
+8. [Read Trimming and Filtering](#read-trimming-and-filtering)
+9. [Assembly](#assembly)
+10. [Genome Annotation, Visualization, and Phylogenetic Comparisons](#genome-annotation-visualization-and-phylogenetic-comparisons)
+11. [Statistics Generation of Assembled Genomes](#statistics-generation-of-assembled-genomes)
+12. [References](#references)
+
 # Executive Summary and Project Goals
 ## Project Objective 
 The goal of this project is the development of a pipeline which will batch process and assemble raw reads of mitochondrial dna into completed mitogenomes that comprise a reference database for fish species along the Fox River. This reference database would ideally then be published to NCBI GenBank and compiled into a microbiology resource announcement. 
@@ -64,10 +78,6 @@ Metabarcoding would allow for a nearly synchronous view of the state of an ecolo
 The goal of the development of this pipeline is to create a reference database of mitochondrial genomes obtained from next generation sequencing of eDNA collected along the Fox River (covering ~140 fish species) (Y. Stuart, Research Proposal). This database, if completed, would be one of the most thorough eDNA metabarcoding reference databases in the world. Eventually, all mitogenomes will be accessionged to NCBI's GenBank repository, this database will be available for use by researchers and managers throughout the Great Lakes, Mississippi River, and beyond to support conservation and restoration projects (Y. Stuart, Research Proposal). 
 
 ---
-
-```{=typst}
-#pagebreak()
-```
 
 ## Initial Goals
 ```{=typst}
@@ -229,6 +239,64 @@ An architectural design record (ADR) is a document that outlines components, pro
 This project was written in the context that it would be reused again in the future, whether to generate new mitogenomes or further development as tools improve or larger tasks evolve, so more robust documentation than that provided with a user manual and in-code commenting would further improve the project to this end. An architectural design record shows the thought process behind the code that ended up in the project, ensuring that both users and future developers understand the logic behind decisions made.
 
 ---
+
+# Repository Structure and Project Design
+The mitogenome batch processor is expected to evolve into a multi-stage bioinformatics pipeline consisting of quality control, read preprocessing, assembly, annotation, phylogenetic validation, statistics generation, reporting, and workflow orchestration. Development is being conducted within a short turnaround internship timeline, requiring a balance between maintainability, scalability, and project transparency. 
+
+To support these goals, a source-layout Python repository structure combined with GitHub Issues and GitHub Projects was selected. 
+
+**Links to Both:**
+
+```{=typst}
+#align(center)[
+```
+- [Repository](https://github.com/cacayan2/mitogenome-batch-processor.git)
+- [Project](https://github.com/users/cacayan2/projects/3/views/1)
+```{=typst}
+]
+```
+
+The repository is organized into several major components:
+
+- `src/mitopipeline/` for reusable Python package code.
+- `ctrl/` for Snakemake rules and configuration.
+- `tests/` for unit tests, integration tests, and fixtures.
+- `envs/` for Conda environment definitions.
+- `zmisc/docs/` for documentation and other miscellaneous artifacts.
+- `zmisc/legacy/` for historical scripts and reference implementations.
+
+Project management is performed through GitHub Issues and a GitHub Project board. Development is tracked by epics representing major pipeline milestones: 
+
+- Repository Foundation
+- Workflow Infrastructure
+- Snakemake Architecture
+- Quality Control
+- Read Preprocessing
+- Assembly
+- Annotation
+- Reporting
+- Phylogenetic Validation
+- Testing
+- Production Readiness
+
+Each issue contains a goal, implementation background, task list, deliverables, and acceptance criteria. Issues are scheduled according to the internship timeline and progresses through the following statuses:
+
+- Ready
+- In Progress
+- Late
+- In Review
+- Done
+
+## Justification
+The source-layout repository structure separates orchestration from reusable code, creating a boundary between Snakemake and Python implementation. This supports the project's object-oriented architecture and allows for easier expansion of tool API's, statistics models, reporting systems, and pipeline management classes without coupling them to implemented definitions.
+
+Using dedicated directories for testing, environment management, documentation, and legacy scripts allows the repository to remain organized throughout development and reduces the cognitive and logistic overhead associated with navigating a codebase. The structure aligns with common Python packaging practices and encourages reproducible software development.
+
+GitHub Issues serve as both implementation tasks and lightweight technical specifications. By embedding goals, background information, deliverables, and acceptance criteria directly into issues, the context of pipeline development remains associated with the work itself rather than distributed across external notes or conversations. This reduces ambniguity and provides a persistent record of project decisions.
+
+The GitHub Project board provides a centralized view of project status and internship progress - organizing issues into epics enables high-level progress tracking while preserving visibility into individual implementation tasks. This simplifies project-management overhead while still providing clear insight into status.
+
+Together, the repository structure and issue-based development process establish a framework for organizing code, documentation, testing, and execution. This system promotes maintainability, reproducibility, traceability of decisions, and ease of future handoff to other developers or laboratory personnel. 
 
 # Data Sources
 At the time of development, two primary sequencing datasets are available on the laboratory workstation and will serve different purposes throughout the project lifecycle. 
