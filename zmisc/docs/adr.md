@@ -27,9 +27,9 @@
 
 # Executive Summary and Project Goals
 ## Project Objective 
-The goal of this project is the development of a pipeline which will batch process and assemble raw reads of mitochondrial dna into completed mitogenomes that comprise a reference database for fish species along the Fox River. This reference database would ideally then be published to NCBI GenBank and compiled into a microbiology resource announcement. 
+The goal of this project is the development of a pipeline which will batch process and assemble raw reads of whole genome (including mitochondrial DNA) into completed mitogenomes that comprise a reference database for fish species in Illinois. This reference database would ideally then be published to NCBI GenBank and compiled into a microbiology resource announcement. 
 
-For the creation of this pipeline, focus will be on documentation, reproducibility, error handling and logging, determination of data fidelity, and test-driven design. Progress of this project will be saved and tracked on GitHub (linked below): 
+For the creation of this pipeline, additional focus will be on documentation, reproducibility, error handling and logging, determination of data fidelity, and test-driven design. Progress of this project will be saved and tracked on GitHub (linked below): 
 
 ```{=typst}
 #align(center)[
@@ -53,7 +53,7 @@ DNA barcoding was a technique introduced in 2003 by Paul Herbert who proposed th
 - Conserved enough to amplify easily (Singh et al., 2017)
 - Variable enough to distinguish between species (Singh et al., 2017; Mohammed et al., 2017)
 
-In the late 2000's, next-generation sequencing allowed for higher-fidelity higher-throughput samples of environmental samples of DNA (called eDNA) (Yoon et al., 2025). This allows for the simultaneous sequencing of entire ecological populations contained within a single ecosystems. This DNA could be barcoded against a reference database, and became known as metabarcoding and was applied to soils, lakes, forests, and gut microbiota. 
+In the late 2000's, next-generation sequencing allowed for higher-fidelity higher-throughput processing of environmental samples of DNA (called eDNA) (Yoon et al., 2025). This allows for the simultaneous sequencing of entire ecological communities contained within a single ecosystem. This DNA could be barcoded against a reference database, and became known as metabarcoding and was applied to soils, lakes, forests, and gut microbiota. 
 
 The Stuart Lab is interested in studying the distribution of freshwater fish along the length of the Fox River (Illinois River Tributary), which flows southwest from southeastern Wisconsin down into northeastern Illinois. This 202-mile-long river originates at Colgate, Wisconsin and crosses into northern Illinois to form the famous Fox Chain O'Lakes, and continues to meander south until it joins the Illinois River at Ottawa, Illinois (Fox River Watershed | Lake County, IL, 2023). 
 
@@ -61,23 +61,27 @@ Ecologically, this river serves a few essential functions:
 
 **1. High-Density Interaction Corridor for Urban Wildlife:**
 
-<br><small>This river is highly salient to its respective ecological community as it serves a niche as a vital ecological oasis inside one of the most highly urbanized and agricultural regions in the United States. This river cuts through the densely populated Chicago suburban collar known as the Fox Valley (Fox River, 2025). The river runs through key portions of forest preserves in the Northwest Suburbs of Illinois (McHenry, Kane, and Will counties specifically) and allows terrestrial and semi-acquatic wildlife (river otters, minks, foxes, and deer) to migrate, forage, and breed without being trapped by suburban sprawl (Fox River, 2025). The river also serves as a massive regional sponge, capturing stormwater runoff to prevent flooding in the larger Chicago metro area and surrounding suburbs (Baldwin, 2026). </br></small>
+<br><small>This river serves a niche as a vital ecological oasis inside one of the most highly urbanized and agricultural regions in the United States. This river cuts through the densely populated Chicago suburban collar known as the Fox Valley (Fox River, 2025). The river runs through key portions of forest preserves in the Northwest Suburbs of Illinois (McHenry, Kane, and Will counties) and allows terrestrial and semi-acquatic wildlife (river otters, minks, foxes, and deer) to migrate, forage, and breed without being trapped by suburban sprawl (Fox River, 2025). The river also serves as a massive regional sponge, capturing stormwater runoff to prevent flooding in the larger Chicago metro area and surrounding suburbs (Baldwin, 2026). </br></small>
 
 **2. Refuge for Threatened Freshwater Mussels:**
 
-<br><small>The Illinois Fox River basin is globally significant for its biodiversity of native freshwater mussels (supporting 24 to 32 distinct species) (Schanzle et al., 2004). Millions of these mussels act as a natural filter for bacteria and algae (up to 10 gallons of water a day) cleaning the water column (Black et al., 2017). The reproductive cycle of these species are quite complex, many requiring larvae to attach to the gills of native fish to grow (Rock et al., 2022). The Fox River provides the multi-species environment for this fragile paradigm to survive - many of these fish species being threatened (such as the Plain Pocketbook, Elktoe, and White Heelsplitter) (Altenritter & Casper, 2018; Shasteen et al., 2013; Limpers 2022). </br></small>
+<br><small>The Illinois Fox River basin is significant for its biodiversity of native freshwater mussels (supporting 24 to 32 distinct species) (Schanzle et al., 2004). Millions of these mussels act as a natural filter for bacteria and algae (up to 10 gallons of water a day) cleaning the water column (Black et al., 2017). The reproductive cycle of these species are quite complex, many requiring larvae to attach to the gills of native fish to grow (Rock et al., 2022). The Fox River provides the multi-species environment for this fragile paradigm to survive - many of these fish species are threatened (such as the Plain Pocketbook, Elktoe, and White Heelsplitter) (Altenritter & Casper, 2018; Shasteen et al., 2013; Limpers 2022). </br></small>
 
-**3. Native Fishery:**
+**3. Native Fish Nursery:**
 
 <br><small> The Fox River is a premier warmwater habitat that hosts nearly 100 native fish (State of the Fox River Report 2003, n.d.). It supports robust populations of apex game fish such as Smallmouth Bass, Flathead Catfish, and Walleye, which keep smaller fish populations healthy and balanced (State of the Fox River Report 2003, n.d.). Feeding streams that branch off the main river (namely Nippersink Creek and Ferson Creek) act as clean, high-quality spawnning grounds where sensitive species lay eggs away from the main river (State of the Fox River Report 2003, n.d.). </br></small>
 
-One of the largest ecological shifts currently occurring in the river is a transition that is largely being facilitated by man. Obsolete industrial dams fragmented the Illinois portion of the river into disconnected pools, preventing migration to upstream spawning creeks, lowering oxygen levels, and caused heavy siltation that suffocated mussel beds (Carpentersville Dam Removal Project - Resource Environmental Solutions, LLC, 2025). While removal of these dams allows for a transition to a free-flowing aquatic highway, it is important to track pre-removal and post-removal changes in the ecological distribution of different species present within the Fox River, as a major concern of residents along the Fox River is fish loss and alleviating this concern is a major goal of ecological conservation groups such as Friends of the Fox River (Y. Stuart, Research Proposal). 
+One important ecological shift currently occurring in the river is a transition that is largely being facilitated by man. Obsolete industrial dams fragmented the Illinois portion of the river into disconnected pools, preventing migration to upstream spawning creeks, lowering oxygen levels, and caused heavy siltation that suffocated mussel beds (Carpentersville Dam Removal Project - Resource Environmental Solutions, LLC, 2025). While removal of these dams allows for a transition to a free-flowing aquatic highway, it is important to track pre-removal and post-removal changes in the ecological distribution of different species present within the Fox River, as a major concern of residents along the Fox River is fish loss and alleviating this concern is a major goal of ecological conservation groups such as Friends of the Fox River (Y. Stuart, Research Proposal). 
 
 Metabarcoding would allow for a nearly synchronous view of the state of an ecological population and trend of population distribution over time with minimal logistical and financial overhead, and would be directly applicable to the study of fish population following dam removal in the Fox River. This method could be further applied to other methods, such as studying the effects of urban and agricultural development and runoff, determination of threatened or endangered species, and the studying of fish migratory patterns. But the one caveat to metabarcoding is: **any metabarcoding workflow is only as good as its reference database.**
 
-The goal of the development of this pipeline is to create a reference database of mitochondrial genomes obtained from next generation sequencing of eDNA collected along the Fox River (covering ~140 fish species) (Y. Stuart, Research Proposal). This database, if completed, would be one of the most thorough eDNA metabarcoding reference databases in the world. Eventually, all mitogenomes will be accessionged to NCBI's GenBank repository, this database will be available for use by researchers and managers throughout the Great Lakes, Mississippi River, and beyond to support conservation and restoration projects (Y. Stuart, Research Proposal). 
+The goal of the development of this pipeline is to create a reference database of mitochondrial genomes obtained from next generation sequencing of DNA extracted from fish  (covering ~140 fish species) (Y. Stuart, Research Proposal). This database, if completed, would be one of the most thorough eDNA metabarcoding reference databases in the world (Y. Stuart, Research Proposal). Eventually, all mitogenomes will be accessionged to NCBI's GenBank repository, this database will be available for use by researchers and managers throughout the Great Lakes, Mississippi River, and beyond to support conservation and restoration projects (Y. Stuart, Research Proposal). 
 
 ---
+
+```{=typst}
+#pagebreak()
+```
 
 ## Initial Goals
 ```{=typst}
@@ -173,7 +177,7 @@ Develop procedures for:
 ```{=typst}
 #rect(fill: luma(245), width: 100%, inset: 15pt)[
 ```
-### Goal 6: Automated Reported
+### Goal 6: Automated Reporting
 
 Generate standardized Markdown reports documenting:
 
@@ -184,7 +188,7 @@ Generate standardized Markdown reports documenting:
 
 **Deliverable:**
 
-- Automatically generated report for each species
+- Automatically generated report for each species, and automatic archiving to GenBank and NCBI. 
 ```{=typst}
 ]
 ```
@@ -226,6 +230,12 @@ Generate standardized Markdown reports documenting:
 
 ---
 
+## Questions for Discussion
+- Which portions of the current workflow are considered highest priority to automate?
+- What software tools are currently utilized for the current workflow? Are there alternatives? 
+- Are there existing datasets that can be utilized for validation?
+
+---
 
 # Arhitectural Design Record (ADR)
 ## Context and Technology Choice
