@@ -14,6 +14,8 @@ def make_logger(name: str,
                 file_level: int = logging.DEBUG) -> logging.Logger: 
     """This function returns a configured logger object. It generates 
     a file handler and a console handler and associates them with the logger.
+    Keep in mind: level DEBUG is only sent to the log file. All other levels
+    are sent to the terminal. 
 
     Args:
         name (str): The name of the logger.
