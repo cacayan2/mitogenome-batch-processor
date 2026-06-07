@@ -9,6 +9,8 @@ src/mitopipeline/api/__init__.py
 src/mitopipeline/exec/__init__.py
 src/mitopipeline/logging/__init__.py
 src/mitopipeline/logging/logger_factory.py
+src/mitopipeline/models/__init__.py
+src/mitopipeline/models/pipeline_job.py
 src/mitopipeline/reporting/__init__.py
 src/mitopipeline/stats/__init__.py
 src/mitopipeline/utils/__init__.py
