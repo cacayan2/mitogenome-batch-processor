@@ -17,8 +17,9 @@ def test_pipelinejob():
         shutil.rmtree(test_path)
     test_path.mkdir(parents = True, exist_ok = True)
 
-    # Instantiating the PipelineJob object.
-    job = PipelineJob(test_path)
+    # Instantiating the PipelineJob object and artificially inserting samples.
+    sample_ids = ["sample_001", "sample_002"]
+    job = PipelineJob(test_path, samples = sample_ids)
     
     # Assertions for job directory creation.
     assert job._job_dir.exists()
@@ -48,18 +49,27 @@ def test_pipelinejob():
     assert data["job_id"] == job._job_id
     assert Path(data["output_dir"]) == job._job_dir
     assert data["status"] == "created"
+    assert data["sample_count"] == 2
+    assert data["samples"] == sample_ids
     
     # Assertions for completion behavior.
     job.mark_completed()
     with open(job._job_dir / "job_metadata.json", "r", encoding="utf-8") as f:
         data = json.load(f)
     assert data["status"] == "completed"
+    assert data["sample_count"] == 2
+    assert data["samples"] == sample_ids
 
     # Assertions for job failure.
     job.mark_failed()
     with open(job._job_dir / "job_metadata.json", "r", encoding="utf-8") as f:
         data = json.load(f)
     assert data["status"] == "failed"
+    assert data["sample_count"] == 2
+    assert data["samples"] == sample_ids
 
-    
+    # Deleting the parent directory.
+    if Path.exists(test_path):
+        shutil.rmtree(test_path)
+
 

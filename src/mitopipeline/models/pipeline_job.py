@@ -11,6 +11,7 @@ from pathlib import Path
 import logging
 import uuid
 import json
+from dataclasses import field
 
 class PipelineJob():
     """Manages the lifecycle and job metadata for a pipeline run.
@@ -18,7 +19,7 @@ class PipelineJob():
     This class handles the creation of a job directory, logging, and job metadata. 
     It generates a unique job ID if one is not provided, and creates a logger for the job.
     """
-    def __init__(self, parent_dir: Path, job_id: str = None):
+    def __init__(self, parent_dir: Path, job_id: str = None, samples: list[str] = field(default_factory = list)):
         """Initializes a PipelineRun object.
 
         Creates a unique job ID if one is not provided, and creates a logger for the job. 
@@ -27,6 +28,7 @@ class PipelineJob():
         Args:
             parent_dir (Path): The parent directory for the job directory.
             job_id (str, optional): The job ID. Defaults to None and will be generated if not provided. 
+            samples (list[str], optional): A list of sample names. Defaults to an empty list.
         """
         # Setting default value for is a new job to True - this will change in subsequent logic structures. 
         self._is_new_job = True
@@ -48,6 +50,7 @@ class PipelineJob():
         self._runtime = None
         self._parent_dir = parent_dir
         self._job_dir = self._parent_dir / self._job_id
+        self._samples = samples
         self._job_logger = self.__create_output_directory()
         self._job_logger.info(f"Pipeline job {self._job_id} started at {self._start_time}.") 
         
@@ -102,6 +105,8 @@ class PipelineJob():
                 "event_time": self._created_time.isoformat(),
                 "runtime_seconds": self._runtime.total_seconds(),
                 "output_dir": str(self._job_dir),
+                "sample_count": len(self._samples),
+                "samples": self._samples,
                 "status": "created"
             }
             
@@ -125,6 +130,8 @@ class PipelineJob():
             "event_time": self._end_time.isoformat(),
             "runtime_seconds": self._runtime.total_seconds(),
             "output_dir": str(self._job_dir),
+            "sample_count": len(self._samples),
+            "samples": self._samples,
             "status": "completed"
         }
         
@@ -144,6 +151,8 @@ class PipelineJob():
             "event_time": self._failed_time.isoformat(),
             "runtime_seconds": self._runtime.total_seconds(),
             "output_dir": str(self._job_dir),
+            "sample_count": len(self._samples),
+            "samples": self._samples,
             "status": "failed"
         }
         
