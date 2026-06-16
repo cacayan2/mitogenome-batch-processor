@@ -40,11 +40,11 @@ def test_valid_minimal_manifest():
 
     # Assert statements.
     assert len(samples) == 1
-    assert samples[0].get_sample_id() == "sample_001"
-    assert samples[0].get_r1().exists()
-    assert samples[0].get_r2().exists()
-    assert samples[0].get_species() is None
-    assert samples[0].get_condition() is None
+    assert samples[0].sample_id == "sample_001"
+    assert samples[0].r1.exists()
+    assert samples[0].r2.exists()
+    assert samples[0].species is None
+    assert samples[0].condition is None
 
     shutil.rmtree(test_dir)
 
@@ -74,9 +74,9 @@ def test_valid_manifest_with_species_and_condition():
     samples = parse_sample_manifest(manifest_path)
 
     assert len(samples) == 1
-    assert samples[0].get_sample_id() == "sample_001"
-    assert samples[0].get_species() == "Lepomis macrochirus"
-    assert samples[0].get_condition() == "before_wga"
+    assert samples[0].sample_id == "sample_001"
+    assert samples[0].species == "Lepomis macrochirus"
+    assert samples[0].condition == "before_wga"
 
     shutil.rmtree(test_dir)
 
@@ -106,8 +106,8 @@ def test_blank_species_becomes_none():
     samples = parse_sample_manifest(manifest_path)
 
     assert len(samples) == 1
-    assert samples[0].get_species() is None
-    assert samples[0].get_condition() == "before_wga"
+    assert samples[0].species is None
+    assert samples[0].condition == "before_wga"
 
     shutil.rmtree(test_dir)
 
