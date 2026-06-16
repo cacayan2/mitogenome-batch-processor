@@ -1,0 +1,2 @@
+sample_id	r1	r2
+sample_001	../fastq/does_not_exist_R1.fastq.gz	../fastq/sample_001_R2.fastq.gz

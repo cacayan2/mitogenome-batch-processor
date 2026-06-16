@@ -2,10 +2,11 @@
 
 Unit tests for logging behavior for this project. 
 """
+
+# Imports
 from pathlib import Path
 import logging
 import shutil
-
 from mitopipeline.logging.logger_factory import make_logger
 
 def test_logger():

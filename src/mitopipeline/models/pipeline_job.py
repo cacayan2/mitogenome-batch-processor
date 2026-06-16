@@ -12,7 +12,6 @@ import logging
 import uuid
 import json
 from dataclasses import field
-
 class PipelineJob():
     """Manages the lifecycle and job metadata for a pipeline run.
 
@@ -186,7 +185,38 @@ class PipelineJob():
             f.seek(0)
             json.dump(history_data, f, indent=4)
             f.truncate()
+    
+    # Getters
+    def get_job_id(self): return self._job_id
+    def get_job_dir(self): return self._job_dir
+    def get_samples(self): return self._samples
+    def get_logger(self): return self._job_logger
+    def get_start_time(self): return self._start_time
+    def get_end_time(self): return self._end_time
+    def get_runtime(self): return self._runtime
+    def get_parent_dir(self): return self._parent_dir
+    def get_is_new_job(self): return self._is_new_job
 
+    # Setters
+    def set_job_id(self, job_id): self._job_id = job_id
+    def set_job_dir(self, job_dir): self._job_dir = job_dir
+    def set_samples(self, samples): self._samples = samples
+    def set_logger(self, logger): self._job_logger = logger
+    def set_start_time(self, start_time): self._start_time = start_time
+    def set_end_time(self, end_time): self._end_time = end_time
+    def set_runtime(self, runtime): self._runtime = runtime
+    def set_parent_dir(self, parent_dir): self._parent_dir = parent_dir
+    def set_is_new_job(self, is_new_job): self._is_new_job = is_new_job
+
+    # Deleters
+    def del_job_id(self): del self._job_id
+    def del_job_dir(self): del self._job_dir
+    def del_samples(self): del self._samples
+    def del_logger(self): del self._job_logger
+    def del_start_time(self): del self._start_time
+    def del_end_time(self): del self._end_time
+    def del_runtime(self): del self._runtime
+    def del_parent_dir(self): del self._parent_dir
 
 
             
