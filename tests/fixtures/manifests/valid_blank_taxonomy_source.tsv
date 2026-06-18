@@ -1,0 +1,2 @@
+sample_id	genus	species	source	r1	r2
+sample_001				../fastq/sample_001_R1.fastq.gz	../fastq/sample_001_R2.fastq.gz

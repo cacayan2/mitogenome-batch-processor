@@ -90,14 +90,18 @@ def parse_sample_manifest(manifest_path: Path, logger: logging.Logger | None = N
             if logger is not None: logger.error(f"Row {line_number} of sample manifest file {manifest_path} is missing r2.")
             raise FileNotFoundError(f"Row {line_number} of sample manifest file {manifest_path} is missing r2.")
         
+
+        ## Converts blank genus to None.
+        genus = _optional_field(row, "genus")
+
         ## Converts blank species to None.
         species = _optional_field(row, "species")
         
-        ## Converts blank condition to None.
-        condition = _optional_field(row, "condition")
+        ## Converts blank source to None.
+        source = _optional_field(row, "source")
         
         ## Creates the sample object.
-        samples.append(Sample(sample_id, r1_path, r2_path, species, condition))
+        samples.append(Sample(sample_id, r1_path, r2_path, genus, species, source))
 
     # Logging success:
     if logger is not None: logger.info(f"Successfully parsed sample manifest file at {manifest_path}, loaded {len(samples)} samples.")
@@ -140,9 +144,9 @@ def _optional_field(row, column_name: str) -> str:
     value = row[column_name]
 
     # Checks if the value is empty.
-    if pd.isna(row[column_name]) or str(row[column_name]).strip() == "":
+    if pd.isna(value) or str(value).strip() == "":
         return None
-    return str(row[column_name]).strip()
+    return str(value).strip()
 
     
 

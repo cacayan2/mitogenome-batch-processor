@@ -29,12 +29,12 @@ def test_sample_creation_minimal():
     assert sample.sample_id == "sample_001"
     assert sample.r1 == r1_path
     assert sample.r2 == r2_path
+    assert sample.genus is None
     assert sample.species is None
-    assert sample.condition is None
+    assert sample.source is None
 
-
-def test_sample_creation_with_species_and_condition():
-    """Unit test for creating a Sample object with species and condition."""
+def test_sample_creation_complete():
+    """Unit test for creating a Sample object with all metadata."""
 
     # Creating fake FASTQ paths.
     r1_path = Path("sample_001_R1.fastq.gz")
@@ -45,17 +45,43 @@ def test_sample_creation_with_species_and_condition():
         sample_id="sample_001",
         r1=r1_path,
         r2=r2_path,
-        species="Lepomis macrochirus",
-        condition="before_wga"
+        genus = "Lopomis",
+        species="macrochirus",
+        source="INHS Fish Collection"
     )
 
     # Assert statements.
     assert sample.sample_id == "sample_001"
     assert sample.r1 == r1_path
     assert sample.r2 == r2_path
-    assert sample.species == "Lepomis macrochirus"
-    assert sample.condition == "before_wga"
+    assert sample.genus == "Lopomis"
+    assert sample.species == "macrochirus"
+    assert sample.source == "INHS Fish Collection"
 
+def test_sample_has_genus():
+    """Unit test for Sample.has_genus()."""
+
+    # Creating fake FASTQ paths.
+    r1_path = Path("sample_001_R1.fastq.gz")
+    r2_path = Path("sample_001_R2.fastq.gz")
+
+    # Creating Sample objects.
+    sample_with_genus = Sample(
+        sample_id="sample_001",
+        r1=r1_path,
+        r2=r2_path,
+        genus="Lopomis"
+    )
+
+    sample_without_genus = Sample(
+        sample_id="sample_002",
+        r1=r1_path,
+        r2=r2_path
+    )
+
+    # Assert statements.
+    assert sample_with_genus.has_genus() is True
+    assert sample_without_genus.has_genus() is False
 
 def test_sample_has_species():
     """Unit test for Sample.has_species()."""
@@ -69,7 +95,7 @@ def test_sample_has_species():
         sample_id="sample_001",
         r1=r1_path,
         r2=r2_path,
-        species="Lepomis macrochirus"
+        species="macrochirus"
     )
 
     sample_without_species = Sample(
@@ -82,32 +108,30 @@ def test_sample_has_species():
     assert sample_with_species.has_species() is True
     assert sample_without_species.has_species() is False
 
-
-def test_sample_has_condition():
-    """Unit test for Sample.has_condition()."""
+def test_sample_has_source():
+    """Unit test for Sample.has_source()."""
 
     # Creating fake FASTQ paths.
     r1_path = Path("sample_001_R1.fastq.gz")
     r2_path = Path("sample_001_R2.fastq.gz")
 
     # Creating Sample objects.
-    sample_with_condition = Sample(
+    sample_with_source = Sample(
         sample_id="sample_001",
         r1=r1_path,
         r2=r2_path,
-        condition="before_wga"
+        source="INHS Fish Collection"
     )
 
-    sample_without_condition = Sample(
+    sample_without_source = Sample(
         sample_id="sample_002",
         r1=r1_path,
         r2=r2_path
     )
 
     # Assert statements.
-    assert sample_with_condition.has_condition() is True
-    assert sample_without_condition.has_condition() is False
-
+    assert sample_with_source.has_source() is True
+    assert sample_without_source.has_source() is False
 
 def test_sample_fastq_files():
     """Unit test for Sample.fastq_files()."""

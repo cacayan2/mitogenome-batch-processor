@@ -20,12 +20,15 @@ class Sample:
     sample_id: str
     r1: Path
     r2: Path
+    genus: str | None = None
     species: str | None = None
-    condition: str | None = None
+    source: str | None = None
+
 
     # Sample validation functions.
     def has_species(self) -> bool: return self.species is not None
-    def has_condition(self) -> bool: return self.condition is not None
+    def has_genus(self) -> bool: return self.genus is not None
+    def has_source(self) -> bool: return self.source is not None
     def fastq_files(self) -> tuple[Path, Path]: return (self.r1, self.r2)
 
 

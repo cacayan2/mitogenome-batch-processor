@@ -1,3 +1,2 @@
 sample_id	r1	r2
 sample_001	../fastq/sample_001_R1.fastq.gz	../fastq/sample_001_R2.fastq.gz
-sample_002	../fastq/sample_002_R1.fastq.gz	../fastq/sample_002_R2.fastq.gz
