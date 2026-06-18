@@ -21,6 +21,9 @@ rule assembly:
     # Specifying the output asssembly file.
     output:
         fasta = str(JOB_DIR / "assembly" / "{sample}.fasta")
+    # Specifying conda environment.
+    conda: 
+        "../../envs/assembly.yaml"
     # Shell script for running the assembly. 
     shell:
         """

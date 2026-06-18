@@ -1,0 +1,6 @@
+name: mito-annotation
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - mitos

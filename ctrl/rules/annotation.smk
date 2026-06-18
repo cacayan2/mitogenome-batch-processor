@@ -19,6 +19,9 @@ rule annotation:
     # Specifying output annotation file.
     output:
         gff = str(JOB_DIR / "annotation" / "{sample}.gff")
+    # Specifying conda environment.
+    conda:
+        "../../envs/annotation.yaml"
     # Shell script for running the annotation. 
     shell:
         """

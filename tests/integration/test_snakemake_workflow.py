@@ -58,6 +58,7 @@ def test_snakemake_placeholder_workflow_execution():
             "tests/fixtures/config/config.yaml",
             "--cores",
             "1",
+            "--use-conda",
         ],
         capture_output=True,
         text=True,

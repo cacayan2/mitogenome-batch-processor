@@ -1,0 +1,6 @@
+name: mito-assembly
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - getorganelle

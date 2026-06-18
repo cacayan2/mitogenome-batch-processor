@@ -19,15 +19,18 @@ rule qc:
         mkdir -p $(dirname {output.done})
         touch {output.done}
     """
+    # Wildcard expansion for samples.
     input:
-        # Wildcard expansion for samples.
         r1 = lambda wildcards: SAMPLE_TABLE.loc[wildcards.sample, "r1"],
         r2 = lambda wildcards: SAMPLE_TABLE.loc[wildcards.sample, "r2"]
+    # Define output files. 
     output:
-        # Define output files. 
         done = f"{JOB_DIR}/qc/{{sample}}.qc.done"
+    # Define conda environment.
+    conda: 
+        "../../envs/qc.yaml"
+    # Shell commands, these are placeholder commands for now. 
     shell:
-        # Shell commands, these are placeholder commands for now. 
         """
         mkdir -p $(dirname {output.done})
         touch {output.done}

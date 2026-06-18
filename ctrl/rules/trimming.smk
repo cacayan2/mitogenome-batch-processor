@@ -19,13 +19,19 @@ rule trimming:
         r1 = "trimmed reads 1",
         r2 = "trimmed reads 2"
     """
+    # Wildcard expansion for samples, including finished quality control. 
     input:
         qc_done = str(JOB_DIR / "qc" / "{sample}.qc.done"),
         r1 = lambda wc: SAMPLE_TABLE.loc[wc.sample, "r1"],
         r2 = lambda wc: SAMPLE_TABLE.loc[wc.sample, "r2"]
+    # Specifying the output trimmed reads. 
     output:
         r1 = str(JOB_DIR / "trimming" / "{sample}_R1.trimmed.fastq.gz"),
         r2 = str(JOB_DIR / "trimming" / "{sample}_R2.trimmed.fastq.gz")
+    # Specifying the conda environment.
+    conda: 
+        "../../envs/trimming.yaml"
+    # Shell script for running the trimming and filtering.
     shell:
         """
         mkdir -p $(dirname {output.r1})

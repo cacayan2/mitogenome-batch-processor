@@ -1,0 +1,6 @@
+name: mito-trimming
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - fastp

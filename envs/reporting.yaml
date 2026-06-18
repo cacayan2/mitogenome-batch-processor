@@ -1,0 +1,7 @@
+name: mito-reporting
+channels:
+  - conda-forge
+dependencies:
+  - python
+  - pandas
+  - matplotlib

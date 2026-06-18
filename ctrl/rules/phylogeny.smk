@@ -21,6 +21,9 @@ rule phylogeny:
     # Specifying output phylogenetic tree file.
     output:
         tree = str(JOB_DIR / "phylogeny" / "{sample}.nwk")
+    # Specifying conda environment.
+    conda: 
+        "../../envs/phylogeny.yaml"
     # Shell script for running the phylogenetic tree.
     shell:
         """

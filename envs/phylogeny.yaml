@@ -1,0 +1,11 @@
+name: mito-phylogeny
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - blast
+
+# TODO:
+# - Add MAFFT when sequence alignment is implemented.
+# - Add IQ-TREE (or FastTree) when automated phylogeny is implemented.
+# - Reevaluate if MEGA11 remains necessary for manual validation. 

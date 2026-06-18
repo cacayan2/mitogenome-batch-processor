@@ -29,6 +29,9 @@ rule reporting:
     # Specifying output report file.
     output:
         report = str(JOB_DIR / "reporting" / "{sample}.report.md")
+    # Specifying conda environment.
+    conda: 
+        "../../envs/reporting.yaml"
     # Shell script for generating the report.
     shell:
         """
