@@ -22,7 +22,7 @@ rule qc:
     input:
         # Wildcard expansion for samples.
         r1 = lambda wildcards: SAMPLE_TABLE.loc[wildcards.sample, "r1"],
-        r2 = lambda wildcards: SAMPLE_TABLE.loc[wildcards.sample, "r2"],
+        r2 = lambda wildcards: SAMPLE_TABLE.loc[wildcards.sample, "r2"]
     output:
         # Define output files. 
         done = f"{JOB_DIR}/qc/{{sample}}.qc.done"

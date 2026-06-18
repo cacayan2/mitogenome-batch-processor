@@ -1,4 +1,49 @@
-import pandas as pd
+"""Snakefile
 
-samples = pd.read_csv(config["manifest"], sep = "\t")
-SAMPLE_IDS
+This file contains the rule for running the overall Snakemake orhcestration. 
+"""
+# Imports
+import pandas as pd
+from pathlib import Path
+
+# Reads the configuraiton file and specifies appropriate directories. 
+OUTPUT_ROOT = Path(config["output_root"])
+JOB_ID = config["job_id"]
+JOB_DIR = OUTPUT_ROOT / JOB_ID
+
+# Reading the sample manifest. 
+MANIFEST_PATH = Path(config["manifest"])
+MANIFEST_DIR = MANIFEST_PATH.parent
+
+SAMPLE_TABLE = pd.read_csv(MANIFEST_PATH, sep = "\t").set_index("sample_id")
+
+for col in ["r1", "r2"]:
+    SAMPLE_TABLE[col] = SAMPLE_TABLE[col].apply(
+        lambda p: str((MANIFEST_DIR / p).resolve()) if not Path(p).is_absolute() else str(Path(p).resolve())
+    )
+
+SAMPLES = SAMPLE_TABLE.index.tolist()
+
+# Including the other Snakefiles.
+include: "rules/qc.smk"
+include: "rules/trimming.smk"
+include: "rules/assembly.smk"
+include: "rules/annotation.smk"
+include: "rules/phylogeny.smk"
+include: "rules/reporting.smk"
+
+rule all:
+    """
+    Run all rules.
+    
+    Input:
+        Nothing (for now)
+
+    Output:
+        Nothing (for now)
+    """
+    input:
+        expand(
+            str(JOB_DIR / "reporting" / "{sample}.report.md"),
+            sample=SAMPLES,
+        )

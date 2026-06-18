@@ -7,9 +7,28 @@ Contains rules for read trimming and filtering execution.
 import pandas as pd
 
 rule trimming:
+    """
+    Run the trimming and filtering workflow.
+
+    Input:
+        qc_done = "qc done",
+        r1 = "raw reads 1",
+        r2 = "raw reads 2"
+
+    Output:
+        r1 = "trimmed reads 1",
+        r2 = "trimmed reads 2"
+    """
     input:
-        qc_done = f"{JOB_DIR}/qc/{{sample}}.qc.done"
-        r1 = lambda wildcards: SAMPLE_TABLE.loc[wildcards.sample, "r1"],
-        r2 = lambda wildcards: SAMPLE_TABLE.loc[wildcards.sample, "r2"]
+        qc_done = str(JOB_DIR / "qc" / "{sample}.qc.done"),
+        r1 = lambda wc: SAMPLE_TABLE.loc[wc.sample, "r1"],
+        r2 = lambda wc: SAMPLE_TABLE.loc[wc.sample, "r2"]
     output:
-        r1 = f"{JOB_DIR}"
+        r1 = str(JOB_DIR / "trimming" / "{sample}_R1.trimmed.fastq.gz"),
+        r2 = str(JOB_DIR / "trimming" / "{sample}_R2.trimmed.fastq.gz")
+    shell:
+        """
+        mkdir -p $(dirname {output.r1})
+        touch {output.r1}
+        touch {output.r2}
+        """
