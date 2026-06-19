@@ -30,6 +30,3 @@ class Sample:
     def has_genus(self) -> bool: return self.genus is not None
     def has_source(self) -> bool: return self.source is not None
     def fastq_files(self) -> tuple[Path, Path]: return (self.r1, self.r2)
-
-
-    

@@ -13,7 +13,9 @@ from datetime import datetime
 import subprocess
 
 class BaseTool(ABC):
-    def __init__(self, tool_name: str, working_dir: Path, logger: Logger | None = None):
+    def __init__(self, tool_name: str, 
+                 working_dir: Path, 
+                 logger: Logger | None = None):
         """
         Initializes a BaseTool object.
 
@@ -57,13 +59,13 @@ class BaseTool(ABC):
         start_time = time.perf_counter()
         started_at = datetime.now()
         # Running the command and logging.
-        if self.logger is not None: self.logger.info(f"Running tool: {self.tool_name} at {start_time}, specific command can be found in logfile.")
-        if self.logger is not None: self.logger.debug(f"Running command {self.command} in {self.working_dir} at {start_time}.")
+        if self.logger is not None: self.logger.info(f"({self.tool_name}) Running tool: {self.tool_name} at {start_time}, specific command can be found in logfile.")
+        if self.logger is not None: self.logger.debug(f"({self.tool_name}) Running command {self.command} in {self.working_dir} at {start_time}.")
         completed = subprocess.run(command, cwd = self.working_dir, capture_output = True, text = True)
         end_time = time.perf_counter()
         ended_at = datetime.now()
-        if self.logger is not None: self.logger.info(f"Tool {self.tool_name} completed at {end_time}, specific command can be found in logfile.")
-        if self.logger is not None: self.logger.debug(f"Command {self.command} in {self.working_dir} completed at {end_time}.")
+        if self.logger is not None: self.logger.info(f"({self.tool_name}) Tool {self.tool_name} completed at {end_time}, specific command can be found in logfile.")
+        if self.logger is not None: self.logger.debug(f"({self.tool_name}) Command {self.command} in {self.working_dir} completed at {end_time}.")
 
         # Constructing the CommandResult object.
         command_result = CommandResult(command, 

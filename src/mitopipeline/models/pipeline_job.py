@@ -51,7 +51,7 @@ class PipelineJob():
         self.job_dir = self.parent_dir / self.job_id
         self.samples = samples
         self.job_logger = self.create_output_directory()
-        self.job_logger.info(f"Pipeline job {self.job_id} started at {self.start_time}.") 
+        self.job_logger.info(f"({self.job_id}) Pipeline job {self.job_id} started at {self.start_time}.") 
         
         # Marks the job as created.
         self.mark_created()
@@ -111,9 +111,9 @@ class PipelineJob():
             
             # Log status
             if self.is_new_job:
-                self.job_logger.info(f"Pipeline job {self.job_id} is a new job, new directory was successfully created at {self.job_dir}.")
+                self.job_logger.info(f"({self.job_id}) Pipeline job {self.job_id} is a new job, new directory was successfully created at {self.job_dir}.")
             else:
-                self.job_logger.info(f"Pipeline job {self.job_id} already exists, using existing directory and automatically progressing pipeline from previous run ({self.job_dir}).")
+                self.job_logger.info(f"({self.job_id}) Pipeline job {self.job_id} already exists, using existing directory and automatically progressing pipeline from previous run ({self.job_dir}).")
                 
             # Write live and append history
             self.write_metadata(data)
@@ -134,7 +134,7 @@ class PipelineJob():
             "status": "completed"
         }
         
-        self.job_logger.info(f"Pipeline job {self.job_id} completed at {self.end_time}.")
+        self.job_logger.info(f"({self.job_id}) Pipeline job {self.job_id} completed at {self.end_time}.")
         
         # Write live and append history
         self.write_metadata(data)
@@ -155,7 +155,7 @@ class PipelineJob():
             "status": "failed"
         }
         
-        self.job_logger.info(f"Pipeline job {self.job_id} failed at {self.failed_time}. Job details can be found in {self.job_dir}.")
+        self.job_logger.info(f"({self.job_id}) Pipeline job {self.job_id} failed at {self.failed_time}. Job details can be found in {self.job_dir}.")
         
         # Write live and append history
         self.write_metadata(data)
@@ -186,6 +186,7 @@ class PipelineJob():
             json.dump(history_data, f, indent=4)
             f.truncate()
 
+        self.job_logger.info(f"({self.job_id}) Wrote job metadata to {live_file} and {history_file}.")
 
             
             
