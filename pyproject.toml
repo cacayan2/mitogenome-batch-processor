@@ -12,6 +12,10 @@ dependencies = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "slow: tests that run external tools, conda, or Snakemake",
+]
+addopts = "-m 'not slow'"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

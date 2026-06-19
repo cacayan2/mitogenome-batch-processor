@@ -2,9 +2,6 @@
 
 Contains rules for quality control execution.
 """
-# Imports
-import pandas as pd
-
 rule qc:
     """Run FastQC on raw sequencing reads.
     
@@ -13,11 +10,11 @@ rule qc:
         r2 = "raw reads 2"
 
     Output:
-        done = "qc done"
-
-    Shell:
-        mkdir -p $(dirname {output.done})
-        touch {output.done}
+        r1_html = "raw reads 1 fastqc html",
+        r1_zip = "raw reads 1 fastqc zip",
+        r2_html = "raw reads 2 fastqc html",
+        r2_zip = "raw reads 2 fastqc zip",
+        done = "qc done" (this is a placeholder so the DAG can be constructed)
     """
     # Wildcard expansion for samples.
     input:
@@ -25,13 +22,28 @@ rule qc:
         r2 = lambda wildcards: SAMPLE_TABLE.loc[wildcards.sample, "r2"]
     # Define output files. 
     output:
-        done = f"{JOB_DIR}/qc/{{sample}}.qc.done"
+        r1_html = str(JOB_DIR / "qc" / "{sample}_R1_fastqc.html"),
+        r1_zip = str(JOB_DIR / "qc" / "{sample}_R1_fastqc.zip"),
+        r2_html = str(JOB_DIR / "qc" / "{sample}_R2_fastqc.html"),
+        r2_zip = str(JOB_DIR / "qc" / "{sample}_R2_fastqc.zip"),
+        done = str(JOB_DIR / "qc" / "{sample}.qc.done")
+    # Define params.
+    params:
+        output_dir = str(JOB_DIR / "qc"),
+        log_file = str(JOB_DIR / "logs" / "fastqc" / "{sample}.log")
     # Define conda environment.
     conda: 
         "../../envs/qc.yaml"
-    # Shell commands, these are placeholder commands for now. 
+    # Shell commands.
     shell:
         """
-        mkdir -p $(dirname {output.done})
+        python -m mitopipeline.exec.run_fastqc \
+            --sample-id {wildcards.sample} \
+            --r1 {input.r1} \
+            --r2 {input.r2} \
+            --output-dir {params.output_dir} \
+            --working-dir . \
+            --log-file {params.log_file}
+        
         touch {output.done}
         """

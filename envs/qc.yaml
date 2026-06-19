@@ -1,4 +1,4 @@
-name: mito-qc
+name: fastqc-env
 channels:
   - conda-forge
   - bioconda

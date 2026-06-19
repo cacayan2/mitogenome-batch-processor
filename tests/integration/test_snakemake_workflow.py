@@ -7,6 +7,9 @@ Integration tests for the Snakemake workflow.
 from pathlib import Path
 import shutil
 import subprocess
+import pytest
+
+pytestmark = pytest.mark.slow
 
 
 def test_snakemake_dry_run():
@@ -40,7 +43,6 @@ def test_snakemake_dry_run():
     assert "rule annotation" in result.stdout
     assert "rule phylogeny" in result.stdout
     assert "rule reporting" in result.stdout
-
 
 def test_snakemake_placeholder_workflow_execution():
     """Integration test confirming placeholder Snakemake workflow executes."""
