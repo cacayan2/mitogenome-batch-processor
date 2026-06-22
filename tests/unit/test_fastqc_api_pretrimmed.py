@@ -17,7 +17,7 @@ def test_fastqc_runner_inherits_from_basetool():
     """Unit test confirming FastQCRunner inherits from BaseTool."""
 
     # Creating temporary test directory.
-    output_dir = Path("fastqtest_tmp")
+    output_dir = Path("fastqtest_tmp.raw")
 
     if output_dir.exists():
         shutil.rmtree(output_dir)
@@ -34,7 +34,7 @@ def test_fastqc_runner_inherits_from_basetool():
         sample=sample,
         output_dir=output_dir,
         working_dir=Path("."),
-        logger=None,
+        logger=None
     )
 
     # Assert statements.
@@ -49,7 +49,7 @@ def test_fastqc_runner_builds_expected_command():
     """Unit test confirming FastQCRunner builds the expected FastQC command."""
 
     # Creating temporary test directory.
-    output_dir = Path("fastqtest_tmp")
+    output_dir = Path("fastqtest.raw_tmp")
 
     if output_dir.exists():
         shutil.rmtree(output_dir)

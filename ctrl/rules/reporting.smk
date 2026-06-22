@@ -20,7 +20,8 @@ rule reporting:
     """
     # Specifying input files.
     input:
-        qc_done = str(JOB_DIR / "qc" / "{sample}.qc.done"),
+        qc_raw_done = str(JOB_DIR / "qc" / "raw" / "{sample}.qc.raw.done"),
+        qc_trimmed_done = str(JOB_DIR / "qc" / "trimmed" / "{sample}.qc.trimmed.done"),
         trimmed_r1 = str(JOB_DIR / "trimming" / "{sample}_R1.trimmed.fastq.gz"),
         trimmed_r2 = str(JOB_DIR / "trimming" / "{sample}_R2.trimmed.fastq.gz"),
         fasta = str(JOB_DIR / "assembly" / "{sample}.fasta"),

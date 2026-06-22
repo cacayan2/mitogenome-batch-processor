@@ -16,11 +16,13 @@ class FastQCRunner(BaseTool):
                  output_dir: Path,
                  sample: Sample,
                  logger: Logger | None = None,
-                 tool_name: str = "fastqc"
+                 tool_name: str = "fastqc",
+                 trimmed: bool = False
                  ):        
         super().__init__(tool_name=tool_name, working_dir=working_dir, logger=logger)
         self.sample = sample
         self.output_dir = output_dir
+        self.trimmed = trimmed
 
     def validate_inputs(self) -> None:
         """Validate inputs for the FastQCRunner. 
@@ -72,14 +74,13 @@ class FastQCRunner(BaseTool):
         r1 = self._strip_fastq_suffix(self.sample.r1)
         r2 = self._strip_fastq_suffix(self.sample.r2)
 
-        # Returning the expected output files.
         return [
             self.output_dir / f"{r1}_fastqc.html",
             self.output_dir / f"{r1}_fastqc.zip",
             self.output_dir / f"{r2}_fastqc.html",
             self.output_dir / f"{r2}_fastqc.zip"
         ]
-    
+
     def _strip_fastq_suffix(self, fastq: Path) -> str:
         """Returns the FASTQ filename without FASTQ extensions.
         

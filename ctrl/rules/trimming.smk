@@ -21,7 +21,7 @@ rule trimming:
     """
     # Wildcard expansion for samples, including finished quality control. 
     input:
-        qc_done = str(JOB_DIR / "qc" / "{sample}.qc.done"),
+        qc_done = str(JOB_DIR / "qc" / "raw" / "{sample}.qc.raw.done"),
         r1 = lambda wc: SAMPLE_TABLE.loc[wc.sample, "r1"],
         r2 = lambda wc: SAMPLE_TABLE.loc[wc.sample, "r2"]
     # Specifying the output trimmed reads. 

@@ -1,6 +1,6 @@
 """run_fastqc.py
 
-Execution layer connecting FastQC to Snakemake.
+Execution layer connecting FastQC to Snakemake - this is for data that is yet to be trimmed.
 """
 
 # Imports
@@ -52,7 +52,7 @@ def build_logger(args) -> Logger:
     Returns:
         Logger: A logger object.
     """
-    return make_logger(name = "fastqc", log_file_path = args.log_file)
+    return make_logger(name = "fastqc.raw", log_file_path = args.log_file)
 
 def main() -> int:
     """Run FastQC for a single sequencing sample.
@@ -71,7 +71,7 @@ def main() -> int:
         sample = build_sample(args)
 
         # Logging the sample object.
-        if logger is not None: logger.info(f"Starting FastQC execution for sample {sample.sample_id}.")
+        if logger is not None: logger.info(f"Starting FastQC execution for rawmed sample {sample.sample_id}.")
 
         # Creating the FastQC API object.
         runner = FastQCRunner(sample = sample, output_dir = Path(args.output_dir), working_dir = Path(args.working_dir), logger = logger)
@@ -82,14 +82,14 @@ def main() -> int:
         # Checking execution result.
         if not result.success:
             if logger: 
-                logger.error(f"FastQC failed for sample {sample.sample_id}.")
+                logger.error(f"FastQC failed for raw sample {sample.sample_id}.")
                 logger.debug(f"FastQC return code: {result.return_code}")
                 logger.debug(f"FastQC stdout:\n{result.stdout}")
                 logger.debug(f"FastQC stderr:\n{result.stderr}")
             
             return result.return_code if result.return_code != 0 else 1
         if logger:
-            logger.info(f"FastQC completed successfully for sample {sample.sample_id}.")
+            logger.info(f"FastQC completed successfully for rawmed sample {sample.sample_id}.")
             logger.debug(f"FastQC runtime seconds: {result.runtime_seconds}")
         return 0
     except Exception as error:

@@ -25,8 +25,9 @@ for col in ["r1", "r2"]:
 SAMPLES = SAMPLE_TABLE.index.tolist()
 
 # Including the other Snakefiles.
-include: "rules/qc.smk"
+include: "rules/qc.raw.smk"
 include: "rules/trimming.smk"
+include: "rules/qc.trimmed.smk"
 include: "rules/assembly.smk"
 include: "rules/annotation.smk"
 include: "rules/phylogeny.smk"

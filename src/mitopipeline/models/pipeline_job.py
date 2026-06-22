@@ -72,7 +72,8 @@ class PipelineJob():
             # List of subdirectories to be created. 
             dirs = [
                 self.job_dir / "logs",
-                self.job_dir / "qc",
+                self.job_dir / "qc_raw",
+                self.job_dir / "qc_trimmed",
                 self.job_dir / "trimming",
                 self.job_dir / "assembly",
                 self.job_dir / "annotation",

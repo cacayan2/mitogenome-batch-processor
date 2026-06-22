@@ -2,7 +2,7 @@
 
 Contains rules for quality control execution.
 """
-rule qc:
+rule qc_raw:
     """Run FastQC on raw sequencing reads.
     
     Input:
@@ -22,22 +22,22 @@ rule qc:
         r2 = lambda wildcards: SAMPLE_TABLE.loc[wildcards.sample, "r2"]
     # Define output files. 
     output:
-        r1_html = str(JOB_DIR / "qc" / "{sample}_R1_fastqc.html"),
-        r1_zip = str(JOB_DIR / "qc" / "{sample}_R1_fastqc.zip"),
-        r2_html = str(JOB_DIR / "qc" / "{sample}_R2_fastqc.html"),
-        r2_zip = str(JOB_DIR / "qc" / "{sample}_R2_fastqc.zip"),
-        done = str(JOB_DIR / "qc" / "{sample}.qc.done")
+        r1_html = str(JOB_DIR / "qc" / "raw" / "{sample}_R1_fastqc.html"),
+        r1_zip = str(JOB_DIR / "qc" / "raw" /  "{sample}_R1_fastqc.zip"),
+        r2_html = str(JOB_DIR / "qc" / "raw" / "{sample}_R2_fastqc.html"),
+        r2_zip = str(JOB_DIR / "qc" / "raw" / "{sample}_R2_fastqc.zip"),
+        done = str(JOB_DIR / "qc" / "raw" / "{sample}.qc.raw.done")
     # Define params.
     params:
-        output_dir = str(JOB_DIR / "qc"),
-        log_file = str(JOB_DIR / "logs" / "fastqc" / "{sample}.log")
+        output_dir = str(JOB_DIR / "qc" / "raw"),
+        log_file = str(JOB_DIR / "logs" / "fastqc" / "{sample}.raw.log")
     # Define conda environment.
     conda: 
         "../../envs/qc.yaml"
     # Shell commands.
     shell:
         """
-        python -m mitopipeline.exec.run_fastqc \
+        python -m mitopipeline.exec.run_fastqc_raw \
             --sample-id {wildcards.sample} \
             --r1 {input.r1} \
             --r2 {input.r2} \
