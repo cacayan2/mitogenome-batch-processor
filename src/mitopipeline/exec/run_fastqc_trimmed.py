@@ -10,6 +10,7 @@ from pathlib import Path
 from mitopipeline.api.fastqc import FastQCRunner
 from mitopipeline.models.sample import Sample
 from mitopipeline.logging.logger_factory import make_logger
+import shutil
 
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments.
@@ -53,7 +54,6 @@ def build_logger(args) -> Logger:
         Logger: A logger object.
     """
     return make_logger(name = "fastqc.trimmed", log_file_path = args.log_file)
-
 def main() -> int:
     """Run FastQC for a single sequencing sample.
     

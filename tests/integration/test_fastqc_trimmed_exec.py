@@ -11,6 +11,7 @@ import pytest
 
 pytestmark = pytest.mark.slow
 
+
 def test_fastqc_raw_exec_layer_through_snakemake():
     """Integration test confirming Snakemake executes raw FastQC through run_fastqc_raw.py."""
 

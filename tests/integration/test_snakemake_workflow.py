@@ -11,7 +11,6 @@ import pytest
 
 pytestmark = pytest.mark.slow
 
-
 def test_snakemake_dry_run():
     """Integration test confirming Snakemake can build the workflow DAG."""
 

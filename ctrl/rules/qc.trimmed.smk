@@ -22,11 +22,11 @@ rule qc_trimmed:
         r2 = str(JOB_DIR / "trimming" / "{sample}_R2.trimmed.fastq.gz")
     # Define output files. 
     output:
-        r1_html = str(JOB_DIR / "qc" / "trimmed" / "{sample}_R1_fastqc.html"),
-        r1_zip = str(JOB_DIR / "qc" / "trimmed" / "{sample}_R1_fastqc.zip"),
-        r2_html = str(JOB_DIR / "qc" / "trimmed" / "{sample}_R2_fastqc.html"),
-        r2_zip = str(JOB_DIR / "qc" / "trimmed" / "{sample}_R2_fastqc.zip"),
-        done = str(JOB_DIR / "qc" / "trimmed" / "{sample}.qc.trimmed.done")
+        r1_html = str(JOB_DIR / "qc" / "trimmed" / "{sample}_R1.trimmed_fastqc.html"),
+        r1_zip  = str(JOB_DIR / "qc" / "trimmed" / "{sample}_R1.trimmed_fastqc.zip"),
+        r2_html = str(JOB_DIR / "qc" / "trimmed" / "{sample}_R2.trimmed_fastqc.html"),
+        r2_zip  = str(JOB_DIR / "qc" / "trimmed" / "{sample}_R2.trimmed_fastqc.zip"),
+        done    = str(JOB_DIR / "qc" / "trimmed" / "{sample}.qc.trimmed.done"),
     # Define params.
     params:
         output_dir = str(JOB_DIR / "qc" / "trimmed"),
