@@ -52,7 +52,7 @@ def build_logger(args) -> Logger:
     Returns:
         Logger: A logger object.
     """
-    return make_logger(name = "fastqc", log_file_path = args.log_file)
+    return make_logger(name = "fastqc.trimmed", log_file_path = args.log_file)
 
 def main() -> int:
     """Run FastQC for a single sequencing sample.

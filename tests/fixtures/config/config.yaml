@@ -9,3 +9,14 @@ stages:
   annotation: true
   phylogeny: true
   reporting: true
+
+tools:
+  fastp:
+    threads: 4
+    qualified_quality_phred: 20
+    length_required: 50
+    trim_front1: null
+    trim_tail1: null
+    cut_front: false
+    cut_right: false
+    detect_adapter_for_pe: true

@@ -11,18 +11,27 @@ from pathlib import Path
 from logging import Logger
 
 class FastQCRunner(BaseTool):
+    """
+    Class for running FastQC on raw sequencing reads.
+    """
     def __init__(self,
                  working_dir: Path,
                  output_dir: Path,
                  sample: Sample,
                  logger: Logger | None = None,
                  tool_name: str = "fastqc",
-                 trimmed: bool = False
                  ):        
+        """Initialize FastQCRunner.
+        
+        Args:
+            working_dir (Path): The working directory for the tool.
+            output_dir (Path): The output directory for the tool.
+            sample (Sample): The sample object.
+            logger (Logger | None, optional): The logger to use. Defaults to None.
+            tool_name (str, optional): The name of the tool. Defaults to "fastqc"."""
         super().__init__(tool_name=tool_name, working_dir=working_dir, logger=logger)
         self.sample = sample
         self.output_dir = output_dir
-        self.trimmed = trimmed
 
     def validate_inputs(self) -> None:
         """Validate inputs for the FastQCRunner. 
@@ -32,17 +41,22 @@ class FastQCRunner(BaseTool):
         Returns:
             None
         """
-        if not self.sample.r1.exists():
+        if not self.sample.r1.exists() or not self.sample.r1.is_file():
             if self.logger is not None: self.logger.error(f"({self.tool_name}) Input file {self.sample.r1} does not exist.")
             raise FileNotFoundError(f"({self.tool_name}) Input file {self.sample.r1} does not exist.")
-        if not self.sample.r2.exists():
+        if not self.sample.r2.exists() or not self.sample.r2.is_file():
             if self.logger is not None: self.logger.error(f"({self.tool_name}) Input file {self.sample.r2} does not exist.")
             raise FileNotFoundError(f"({self.tool_name}) Input file {self.sample.r2} does not exist.")
 
     def build_command(self) -> list[str]:
         """Builds the command to run FastQC on raw sequencing reads. Also creates the output directory if not already created."""
         self.output_dir.mkdir(parents = True, exist_ok = True)
-        return ["fastqc", str(self.sample.r1), str(self.sample.r2), "-o", str(self.output_dir)]
+        return ["fastqc", 
+                str(self.sample.r1), 
+                str(self.sample.r2), 
+                "-o", 
+                str(self.output_dir),
+                ]
 
     def validate_outputs(self) -> None:
         """Validate outputs for the FastQCRunner.
@@ -55,7 +69,7 @@ class FastQCRunner(BaseTool):
         # Obtaining the expected output files.
         outputs = self._expected_fastqc_outputs()
 
-        for expected_file in self._expected_fastqc_outputs():
+        for expected_file in outputs:
             if not expected_file.exists():
                 if self.logger is not None: self.logger.error(f"({self.tool_name}) Expected output file {expected_file} does not exist.")
                 raise FileNotFoundError(f"({self.tool_name}) Expected output file {expected_file} does not exist.")
@@ -68,8 +82,12 @@ class FastQCRunner(BaseTool):
         """
         return super().run()
 
-    def _expected_fastqc_outputs(self) -> dict[str, Path]:
-        """Returns the expected output files for FastQC."""
+    def _expected_fastqc_outputs(self) -> list[Path]:
+        """Returns the expected output files for FastQC.
+        
+        Returns:
+            dict[str, Path]: The expected output files for FastQC.
+        """
         # Obtaining the stem of the input files.
         r1 = self._strip_fastq_suffix(self.sample.r1)
         r2 = self._strip_fastq_suffix(self.sample.r2)
