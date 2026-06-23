@@ -92,4 +92,4 @@ def test_snakemake_placeholder_workflow_execution():
     finally:
         # Cleanup.
         if output_dir.exists():
-            shutil.rmtree(output_dir)
+            pass
