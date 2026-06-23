@@ -86,7 +86,7 @@ class FastQCRunner(BaseTool):
         """Returns the expected output files for FastQC.
         
         Returns:
-            dict[str, Path]: The expected output files for FastQC.
+            list[Path]: The expected output files for FastQC.
         """
         # Obtaining the stem of the input files.
         r1 = self._strip_fastq_suffix(self.sample.r1)
@@ -116,5 +116,3 @@ class FastQCRunner(BaseTool):
         elif name.endswith(".fq.gz"): return name[:-6]
         elif name.endswith(".fastq"): return name[:-6]
         elif name.endswith(".fq"): return name[:-3]
-
-    

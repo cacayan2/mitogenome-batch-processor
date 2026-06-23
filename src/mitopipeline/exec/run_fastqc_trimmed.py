@@ -60,6 +60,9 @@ def main() -> int:
     Returns:
         int: 0 if successful, 1 otherwise.
     """
+    # Setting none object for logger.
+    logger = None
+    
     try:
         # Obtaining the parsed arguments.
         args = parse_args()
@@ -74,7 +77,12 @@ def main() -> int:
         if logger is not None: logger.info(f"Starting FastQC execution for trimmed sample {sample.sample_id}.")
 
         # Creating the FastQC API object.
-        runner = FastQCRunner(sample = sample, output_dir = Path(args.output_dir), working_dir = Path(args.working_dir), logger = logger)
+        runner = FastQCRunner(
+            sample = sample, 
+            output_dir = Path(args.output_dir), 
+            working_dir = Path(args.working_dir), 
+            logger = logger
+        )
 
         # Running FastQC and obtaining CommandResult.
         result = runner.run()

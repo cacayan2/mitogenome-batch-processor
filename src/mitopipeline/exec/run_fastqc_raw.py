@@ -22,12 +22,12 @@ def parse_args() -> argparse.Namespace:
     )
 
     # Define arguments for files.
-    parser.add_argument("--sample-id", help = "The unique identifier for the sample.")
-    parser.add_argument("--r1", help = "Path to the R1 input file.")
-    parser.add_argument("--r2", help = "Path to the R2 input file.")
-    parser.add_argument("--output-dir", help = "Path to the output directory.")
-    parser.add_argument("--working-dir", help = "Path to the working directory.")
-    parser.add_argument("--log-file", help = "Path to the logger.")
+    parser.add_argument("--sample-id", help = "The unique identifier for the sample.", required = True)
+    parser.add_argument("--r1", help = "Path to the R1 input file.", required = True)
+    parser.add_argument("--r2", help = "Path to the R2 input file.", required = True)
+    parser.add_argument("--output-dir", help = "Path to the output directory.", required = True)
+    parser.add_argument("--working-dir", help = "Path to the working directory.", required = True)
+    parser.add_argument("--log-file", help = "Path to the logger.", required = True)
 
     # Return the parsed arguments.
     return parser.parse_args()
@@ -60,6 +60,9 @@ def main() -> int:
     Returns:
         int: 0 if successful, 1 otherwise.
     """
+    # Setting none object for logger.
+    logger = None
+
     try:
         # Obtaining the parsed arguments.
         args = parse_args()
@@ -74,7 +77,12 @@ def main() -> int:
         if logger is not None: logger.info(f"Starting FastQC execution for rawmed sample {sample.sample_id}.")
 
         # Creating the FastQC API object.
-        runner = FastQCRunner(sample = sample, output_dir = Path(args.output_dir), working_dir = Path(args.working_dir), logger = logger)
+        runner = FastQCRunner(
+            sample = sample, 
+            output_dir = Path(args.output_dir), 
+            working_dir = Path(args.working_dir), 
+            logger = logger
+        )
 
         # Running FastQC and obtaining CommandResult.
         result = runner.run()
@@ -86,10 +94,9 @@ def main() -> int:
                 logger.debug(f"FastQC return code: {result.return_code}")
                 logger.debug(f"FastQC stdout:\n{result.stdout}")
                 logger.debug(f"FastQC stderr:\n{result.stderr}")
-            
             return result.return_code if result.return_code != 0 else 1
         if logger:
-            logger.info(f"FastQC completed successfully for rawmed sample {sample.sample_id}.")
+            logger.info(f"FastQC completed successfully for raw sample {sample.sample_id}.")
             logger.debug(f"FastQC runtime seconds: {result.runtime_seconds}")
         return 0
     except Exception as error:

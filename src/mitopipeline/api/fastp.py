@@ -151,6 +151,17 @@ class FastpRunner(BaseTool):
             "length_required": "--length_required",
             "trim_front1": "--trim_front1",
             "trim_tail1": "--trim_tail1",
+            "trim_front2": "--trim_front2",
+            "trim_tail2": "--trim_tail2",
+            "cut_window_size": "--cut_window_size",
+            "cut_mean_quality": "--cut_mean_quality",
+            "n_base_limit": "--n_base_limit",
+            "unqualified_percent_limit": "--unqualified_percent_limit",
+            "average_qual": "--average_qual",
+            "report_title": "--report_title",
+            "adapter_sequence": "--adapter_sequence",
+            "adapter_sequence_r2": "--adapter_sequence_r2",
+            "adapter_fasta": "--adapter_fasta",
         }
 
         # Iterating through options and adding them to the command.
@@ -162,10 +173,15 @@ class FastpRunner(BaseTool):
         
         # Setting up boolean flags map. 
         boolean_flag = {
+            "detect_adapter_for_pe": "--detect_adapter_for_pe",
             "cut_front": "--cut_front",
             "cut_tail": "--cut_tail",
             "cut_right": "--cut_right",
-            "detect_adapter_for_pe": "--detect_adapter_for_pe", 
+            "disable_quality_filtering": "--disable_quality_filtering",
+            "disable_length_filtering": "--disable_length_filtering",
+            "trim_poly_g": "--trim_poly_g",
+            "disable_trim_poly_g": "--disable_trim_poly_g",
+            "trim_poly_x": "--trim_poly_x",
         }
 
         # Iterating through boolean options and adding them to the command.

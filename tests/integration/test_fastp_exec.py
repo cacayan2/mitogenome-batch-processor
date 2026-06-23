@@ -1,6 +1,6 @@
-"""test_fastqc_raw_exec.py
+"""test_fastp_exec.py
 
-Integration tests for the FastQC execution layer through Snakemake, specifically for raw FASTQ reads.
+Integration tests for the fastp execution layer through Snakemake.
 """
 
 # Imports
@@ -11,22 +11,21 @@ import pytest
 
 pytestmark = pytest.mark.slow
 
-
-def test_fastqc_raw_exec_layer_through_snakemake():
-    """Integration test confirming Snakemake executes raw FastQC through run_fastqc_raw.py."""
+def test_fastp_exec_layer_through_snakemake():
+    """Integration test confirming Snakemake executes fastp through run_fastp.py."""
 
     # Defining test paths.
     output_dir = Path("tests/fixtures/outputs/test_job")
-    qc_dir = output_dir / "qc" / "raw"
-    log_file = output_dir / "logs" / "fastqc" / "sample_001.raw.log"
-    target = qc_dir / "sample_001_R1_fastqc.html"
+    trimming_dir = output_dir / "trimming"
+    log_file = output_dir / "logs" / "trimming" / "sample_001.log"
+    target = trimming_dir / "sample_001_R1.trimmed.fastq.gz"
 
     # Removing previous test outputs.
     if output_dir.exists():
         shutil.rmtree(output_dir)
 
     try:
-        # Running the raw FastQC rule through Snakemake.
+        # Running the fastp trimming rule through Snakemake.
         result = subprocess.run(
             [
                 "snakemake",
@@ -46,10 +45,9 @@ def test_fastqc_raw_exec_layer_through_snakemake():
         # Assert statements.
         assert result.returncode == 0, result.stdout + result.stderr
         assert target.exists()
-        assert (qc_dir / "sample_001_R1_fastqc.zip").exists()
-        assert (qc_dir / "sample_001_R2_fastqc.html").exists()
-        assert (qc_dir / "sample_001_R2_fastqc.zip").exists()
-        assert (qc_dir / "sample_001.qc.raw.done").exists()
+        assert (trimming_dir / "sample_001_R2.trimmed.fastq.gz").exists()
+        assert (trimming_dir / "sample_001.fastp.html").exists()
+        assert (trimming_dir / "sample_001.fastp.json").exists()
         assert log_file.exists()
 
     finally:
