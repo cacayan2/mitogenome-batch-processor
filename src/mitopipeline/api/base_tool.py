@@ -15,7 +15,7 @@ import subprocess
 class BaseTool(ABC):
     def __init__(self, tool_name: str, 
                  working_dir: Path, 
-                 logger: Logger | None = None):
+                 logger: Logger | None = None) -> None:
         """
         Initializes a BaseTool object.
 
@@ -23,6 +23,9 @@ class BaseTool(ABC):
             tool_name (str): The name of the tool.
             working_dir (Path): The working directory for the tool.
             logger (Logger | None, optional): The logger to use. Defaults to None.
+
+        Returns:
+            None
         """
         self.tool_name = tool_name
         self.working_dir = working_dir

@@ -15,7 +15,6 @@ class FastpRunner(BaseTool):
     """
     Class for running fastp on raw sequencing reads.
     """
-
     def __init__(self,
                  working_dir: Path,
                  output_dir: Path,
@@ -24,7 +23,7 @@ class FastpRunner(BaseTool):
                  threads: int = 4,
                  logger: Logger | None = None,
                  tool_name: str = "fastp",
-                 ):
+                 ) -> None:
         """Initialize FastPRunner.
         
         Args:
@@ -33,6 +32,9 @@ class FastpRunner(BaseTool):
             sample (Sample): The sample object.
             logger (Logger | None, optional): The logger to use. Defaults to None.
             tool_name (str, optional): The name of the tool. Defaults to "fastp".
+
+        Returns:
+            None
         """
         super().__init__(tool_name=tool_name, working_dir=working_dir, logger=logger)
         self.sample = sample
