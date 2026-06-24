@@ -46,7 +46,7 @@ def make_logger(name: str,
         "[%(levelname)s] %(message)s"
     )
     file_formatter = logging.Formatter(
-        "%(asctime)s | [%(levelname)s] | %(message)s | %(filename)s:%(lineno)d | %(message)s"
+        "%(asctime)s | [%(levelname)s] | %(message)s | %(filename)s:%(lineno)d"
     )
 
     # Creating the console handler and setting level and formatter.

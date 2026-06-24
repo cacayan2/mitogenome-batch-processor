@@ -30,7 +30,7 @@ rule qc_raw:
     # Define params.
     params:
         output_dir = str(JOB_DIR / "qc" / "raw"),
-        log_file = str(JOB_DIR / "logs" / "fastqc" / "{sample}.raw.log")
+        log_file = str(JOB_DIR / "logs" / "fastqc.raw" / "{sample}.log")
     # Define conda environment.
     conda: 
         "../../envs/qc.yaml"

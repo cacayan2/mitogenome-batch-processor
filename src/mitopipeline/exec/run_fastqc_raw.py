@@ -74,7 +74,7 @@ def main() -> int:
         sample = build_sample(args)
 
         # Logging the sample object.
-        if logger is not None: logger.info(f"Starting FastQC execution for rawmed sample {sample.sample_id}.")
+        if logger is not None: logger.info(f"Starting FastQC execution for raw sample {sample.sample_id}.")
 
         # Creating the FastQC API object.
         runner = FastQCRunner(
