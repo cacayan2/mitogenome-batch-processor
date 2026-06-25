@@ -1,51 +1,94 @@
 """Snakefile
 
-This file contains the rule for running the overall Snakemake orhcestration. 
+This file contains the rule for running the overall Snakemake orchestration.
 """
+
 # Imports
 import pandas as pd
 from pathlib import Path
 
-# Reads the configuraiton file and specifies appropriate directories. 
+# Reads the configuration file and specifies appropriate directories.
 OUTPUT_ROOT = Path(config["output_root"])
 JOB_ID = config["job_id"]
 JOB_DIR = OUTPUT_ROOT / JOB_ID
 
-# Reading the sample manifest. 
+# Obtaining the stages from the configuration file.
+STAGES = config.get("stages", {})
+
+# Reading the runtime sample manifest.
 MANIFEST_PATH = Path(config["manifest"])
-MANIFEST_DIR = MANIFEST_PATH.parent
-
-SAMPLE_TABLE = pd.read_csv(MANIFEST_PATH, sep = "\t").set_index("sample_id")
-
-for col in ["r1", "r2"]:
-    SAMPLE_TABLE[col] = SAMPLE_TABLE[col].apply(
-        lambda p: str((MANIFEST_DIR / p).resolve()) if not Path(p).is_absolute() else str(Path(p).resolve())
-    )
-
+SAMPLE_TABLE = pd.read_csv(MANIFEST_PATH, sep="\t").set_index("sample_id")
 SAMPLES = SAMPLE_TABLE.index.tolist()
 
-# Including the other Snakefiles.
-include: "rules/qc.raw.smk"
-include: "rules/trimming.smk"
-include: "rules/qc.trimmed.smk"
-include: "rules/getorganelle_config.smk"
-include: "rules/assembly.smk"
-include: "rules/annotation.smk"
-include: "rules/phylogeny.smk"
-include: "rules/reporting.smk"
+
+def stage_enabled(stage_name: str) -> bool:
+    """Return True if the stage is enabled."""
+
+    return STAGES.get(stage_name, False)
+
+
+def enabled_targets() -> list:
+    """Return final workflow targets for enabled stages."""
+
+    targets = []
+
+    if stage_enabled("qc_raw"):
+        targets.extend(
+            expand(str(JOB_DIR / "qc" / "raw" / "{sample}.qc.raw.done"), sample=SAMPLES)
+        )
+    if stage_enabled("trimming"):
+        targets.extend(
+            expand(str(JOB_DIR / "trimming" / "{sample}.trimming.done"), sample=SAMPLES)
+        )
+    if stage_enabled("qc_trimmed"):
+        targets.extend(
+            expand(str(JOB_DIR / "qc" / "trimmed" / "{sample}.qc.trimmed.done"), sample=SAMPLES)
+        )
+    if stage_enabled("assembly"):
+        targets.extend(
+            expand(str(JOB_DIR / "assembly" / "{sample}.assembly.done"), sample=SAMPLES)
+        )
+    if stage_enabled("annotation"):
+        targets.extend(
+            expand(str(JOB_DIR / "annotation" / "{sample}.annotation.done"), sample=SAMPLES)
+        )
+    if stage_enabled("phylogeny"):
+        targets.extend(
+            expand(str(JOB_DIR / "phylogeny" / "{sample}.phylogeny.done"), sample=SAMPLES)
+        )
+    if stage_enabled("reporting"):
+        targets.extend(
+            expand(str(JOB_DIR / "reporting" / "{sample}.report.md"), sample=SAMPLES)
+        )
+    return targets
+
+
+ENABLED_TARGETS = enabled_targets()
 
 rule all:
-    """
-    Run all rules.
-    
-    Input:
-        Nothing (for now)
-
-    Output:
-        Nothing (for now)
-    """
+    """Run enabled workflow stages."""
     input:
-        expand(
-            str(JOB_DIR / "reporting" / "{sample}.report.md"),
-            sample=SAMPLES,
-        )
+        ENABLED_TARGETS
+
+# Include rule files conditionally.
+if stage_enabled("qc_raw"):
+    include: "rules/qc.raw.smk"
+
+if stage_enabled("trimming"):
+    include: "rules/trimming.smk"
+
+if stage_enabled("qc_trimmed"):
+    include: "rules/qc.trimmed.smk"
+
+if stage_enabled("assembly"):
+    include: "rules/getorganelle_config.smk"
+    include: "rules/assembly.smk"
+
+if stage_enabled("annotation"):
+    include: "rules/annotation.smk"
+
+if stage_enabled("phylogeny"):
+    include: "rules/phylogeny.smk"
+
+if stage_enabled("reporting"):
+    include: "rules/reporting.smk"

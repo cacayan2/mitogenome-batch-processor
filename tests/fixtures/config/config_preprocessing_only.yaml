@@ -1,80 +1,46 @@
 output_root: tests/fixtures/outputs
-input_dir: tests/fixtures/fastq
-manifest: tests/fixtures/manifests/valid_minimal.tsv
+manifest: tests/fixtures/manifests/valid_minimal_absolute.tsv
 job_id: test_job
 
 stages:
   qc_raw: true
   trimming: true
   qc_trimmed: true
-  assembly: true
-  annotation: true
-  phylogeny: true
-  reporting: true
+  assembly: false
+  annotation: false
+  phylogeny: false
+  reporting: false
 
 tools:
   fastp:
     threads: 4
-
     qualified_quality_phred: 20
     length_required: 50
-
     trim_front1: null
     trim_tail1: null
     trim_front2: null
     trim_tail2: null
-
     cut_window_size: 4
     cut_mean_quality: 20
-
     n_base_limit: 5
     unqualified_percent_limit: 40
     average_qual: null
-
     report_title: null
     adapter_sequence: null
     adapter_sequence_r2: null
     adapter_fasta: null
-
     detect_adapter_for_pe: true
     cut_front: false
     cut_tail: false
     cut_right: false
-
     disable_quality_filtering: false
     disable_length_filtering: false
-
     trim_poly_g: false
     disable_trim_poly_g: false
     trim_poly_x: false
- 
+
   getorganelle:
     threads: 4
+    organelle_type: animal_mt
     database_type: animal_mt
-    initialize_database: true
-    max_rounds: null
-    kmer: null
-    word_size: null
-    pre_grouping: null
-    max_reads: null
-    target_coverage: null
-    min_read_length: null
-    max_read_length: null
-    expected_max_size: null
-    expected_min_size: null
-    seed_file: null
-    genes_file: null
-    exclude_fasta: null
-    prefix: null
-    round_output_prefix: null
-    blast_path: null
-    bandage_path: null
-    spades_path: null
-    overwrite: true
-    continue_run: false
-    fast_mode: false
-    disentangle: false
-    reverse_lsc: false
-    no_slim: false
-    keep_temp_files: false
-    verbose: false
+    initialize_database: false

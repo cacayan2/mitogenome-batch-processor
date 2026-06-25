@@ -1,6 +1,5 @@
 output_root: tests/fixtures/outputs
-input_dir: tests/fixtures/fastq
-manifest: tests/fixtures/manifests/valid_minimal.tsv
+manifest: tests/fixtures/manifests/valid_minimal_absolute.tsv
 job_id: test_job
 
 stages:

@@ -12,10 +12,38 @@ import subprocess
 from pathlib import Path
 import yaml
 import logging
+import pandas as pd
 
 from mitopipeline.models.pipeline_job import PipelineJob
 from mitopipeline.manifest.sample_manifest import parse_sample_manifest
 from mitopipeline.logging.logger_factory import make_logger
+
+def normalize_manifest_paths(manifest_path: Path, output_manifest: Path) -> None:
+    """Normalize manifest FASTQ paths and write a runtime manifest.
+    
+    Args:
+        manifest_path (Path): The path to the manifest file.
+        output_manifest (Path): The path to the output manifest file.
+
+    Returns:
+        None
+    """
+    # Reading manifest.
+    df = pd.read_csv(manifest_path, sep = "\t")
+
+    # Resolving paths relative to original manifest location.
+    manifest_dir = manifest_path.parent
+
+    for column in ["r1", "r2"]:
+        df[column] = df[column].apply(
+            lambda value: str(Path(value).resolve())
+            if Path(str(value)).is_absolute()
+            else str((manifest_dir / str(value)).resolve())
+        )
+    
+    # Writing normalized runtime manifest.
+    output_manifest.parent.mkdir(parents = True, exist_ok = True)
+    df.to_csv(output_manifest, sep = "\t", index = False)
 
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments.
@@ -136,8 +164,8 @@ def discover_fastq_pairs(input_dir: Path, job: PipelineJob) -> list[dict[str, st
         records.append(
             {
                 "sample_id": sample_id,
-                "r1": str(r1_files[sample_id]),
-                "r2": str(r2_files[sample_id]),
+                "r1": str(r1_files[sample_id].resolve()),
+                "r2": str(r2_files[sample_id].resolve()),
                 "genus": "",
                 "species": "",
                 "source": "discovered_fastq",
@@ -193,11 +221,14 @@ def prepare_runtime_manifest(config: dict, job: PipelineJob) -> Path:
     if manifest_path is not None:
         manifest_path = Path(manifest_path)
 
-        # Validating manifest by parsing it.
+        # Validating sample manifest by parsing it.
         parse_sample_manifest(manifest_path, logger = job.job_logger)
 
         # Copying manifest into job directory.
-        shutil.copy2(manifest_path, runtime_manifest)
+        normalize_manifest_paths(manifest_path, runtime_manifest)
+
+        # Validating runtime manifest by parsing it. 
+        parse_sample_manifest(runtime_manifest, logger = job.job_logger)
 
         # Logging manifest copy.
         job.job_logger.info(f"Copied validated manifest to {runtime_manifest}")

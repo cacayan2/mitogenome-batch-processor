@@ -1,0 +1,22 @@
+output_root: tests/fixtures/outputs
+manifest: tests/fixtures/manifests/valid_minimal_absolute.tsv
+job_id: test_job
+
+stages:
+  qc_raw: true
+  trimming: false
+  qc_trimmed: false
+  assembly: false
+  annotation: false
+  phylogeny: false
+  reporting: false
+
+tools:
+  fastp:
+    threads: 4
+
+  getorganelle:
+    threads: 4
+    organelle_type: animal_mt
+    database_type: animal_mt
+    initialize_database: false
