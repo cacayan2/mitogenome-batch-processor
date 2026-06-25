@@ -18,7 +18,7 @@ class PipelineJob():
     This class handles the creation of a job directory, logging, and job metadata. 
     It generates a unique job ID if one is not provided, and creates a logger for the job.
     """
-    def __init__(self, parent_dir: Path, job_id: str = None, samples: list[str] = field(default_factory = list)):
+    def __init__(self, parent_dir: Path, job_id: str = None, samples: list[str] | None = None):
         """Initializes a PipelineRun object.
 
         Creates a unique job ID if one is not provided, and creates a logger for the job. 
@@ -40,6 +40,10 @@ class PipelineJob():
         else:
             now = datetime.now()
             self.job_id = f"{now.strftime("%Y%m%d")}_{now.strftime("%H%M")}_{str(uuid.uuid4())}"
+
+        # Instantiation of the samples object if none is provided.
+        if samples is None:
+            self.samples = []
 
         # Instantiation of member variables. 
         self.start_time = datetime.now()

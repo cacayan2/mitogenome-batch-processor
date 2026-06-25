@@ -27,6 +27,8 @@ rule phylogeny:
     # Shell script for running the phylogenetic tree.
     shell:
         """
+        python -m pip install -e . --quiet
+
         mkdir -p $(dirname {output.tree})
         echo "({wildcards.sample});" > {output.tree}
         """

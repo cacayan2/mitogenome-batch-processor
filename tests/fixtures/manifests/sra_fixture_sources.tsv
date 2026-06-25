@@ -1,0 +1,7 @@
+sample_id	sra_run	genus	species	source
+lemon_shark_001	SRR23340818	Negaprion	brevirostris	NCBI_SRA
+common_carp_001	SRR12996635	Cyprinus	carpio	NCBI_SRA
+neolissochilus_001	SRR18356108	Neolissochilus	stracheyi	NCBI_SRA
+korean_loach_001	SRR17652036	Koreocobitis	naktongensis	NCBI_SRA
+sea_chub_001	SRR28380136	Girella	nigricans	NCBI_SRA
+sea_chub_002	SRR28380135	Kyphosus	azureus	NCBI_SRA

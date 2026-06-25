@@ -36,6 +36,8 @@ rule reporting:
     # Shell script for generating the report.
     shell:
         """
+        python -m pip install -e . --quiet
+
         mkdir -p $(dirname {output.report})
         echo "# Report for {wildcards.sample}" > {output.report}
         """

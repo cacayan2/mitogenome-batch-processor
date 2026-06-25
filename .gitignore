@@ -5,3 +5,6 @@ __pycache__/
 .venv
 .snakemake
 tests/fixtures/outputs/
+tests/fixtures/fastq_real/
+tests/fixtures/sra_cache/
+tests/fixtures/logs/

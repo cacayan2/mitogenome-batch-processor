@@ -52,40 +52,59 @@ class BaseTool(ABC):
         Returns:
             CommandResult: The result of running the tool.
         """
+
         # Validate inputs.
         self.validate_inputs()
 
-        # Constructing the command.
+        # Construct command.
         command = self.build_command()
 
-        # Obtaining time metadata.
+        # Time metadata.
         start_time = time.perf_counter()
         started_at = datetime.now()
-        # Running the command and logging.
-        if self.logger is not None: self.logger.info(f"({self.tool_name}) Running tool: {self.tool_name} at {start_time}, specific command can be found in logfile.")
-        if self.logger is not None: self.logger.debug(f"({self.tool_name}) Running command {command} in {self.working_dir} at {start_time}.")
-        completed = subprocess.run(command, cwd = self.working_dir, capture_output = True, text = True)
+
+        if self.logger is not None:
+            self.logger.info(f"({self.tool_name}) Starting execution.")
+            self.logger.debug(f"({self.tool_name}) Command: {command}")
+            self.logger.debug(f"({self.tool_name}) Working directory: {self.working_dir}")
+
+        # Run command.
+        completed = subprocess.run(
+            command,
+            cwd=self.working_dir,
+            capture_output=True,
+            text=True,
+        )
+
         end_time = time.perf_counter()
         ended_at = datetime.now()
-        if self.logger is not None: self.logger.info(f"({self.tool_name}) Tool {self.tool_name} completed at {end_time}, specific command can be found in logfile.")
-        if self.logger is not None: self.logger.debug(f"({self.tool_name}) Command {command} in {self.working_dir} completed at {end_time}.")
 
-        # Constructing the CommandResult object.
-        command_result = CommandResult(command, 
-                             completed.returncode, 
-                             completed.stdout, 
-                             completed.stderr, 
-                             end_time - start_time,
-                             completed.returncode == 0,
-                             tool_name = self.tool_name,
-                             started_at = started_at,
-                             ended_at = ended_at
-                             )
-        
-        # Validating outputs if the command was successful.
-        if command_result.success:
-            self.validate_outputs()
+        # Build CommandResult.
+        command_result = CommandResult(
+            command=command,
+            return_code=completed.returncode,
+            stdout=completed.stdout,
+            stderr=completed.stderr,
+            runtime_seconds=end_time - start_time,
+            success=completed.returncode == 0,
+            tool_name=self.tool_name,
+            started_at=started_at,
+            ended_at=ended_at,
+        )
 
-        # Returning the CommandResult object.
+        if self.logger is not None:
+            self.logger.info(f"({self.tool_name}) Execution finished with return code {command_result.return_code}.")
+            self.logger.debug(f"({self.tool_name}) Runtime seconds: {command_result.runtime_seconds}")
+            self.logger.debug(f"({self.tool_name}) stdout: {command_result.stdout}")
+            self.logger.debug(f"({self.tool_name}) stderr: {command_result.stderr}")
+
+        # If external tool failed, return result without validating outputs.
+        if not command_result.success:
+            if self.logger is not None:
+                self.logger.error(f"({self.tool_name}) Execution failed with return code {command_result.return_code}.")
+            return command_result
+
+        # Only validate outputs after successful execution.
+        self.validate_outputs()
+
         return command_result
-    

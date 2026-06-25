@@ -28,6 +28,7 @@ SAMPLES = SAMPLE_TABLE.index.tolist()
 include: "rules/qc.raw.smk"
 include: "rules/trimming.smk"
 include: "rules/qc.trimmed.smk"
+include: "rules/getorganelle_config.smk"
 include: "rules/assembly.smk"
 include: "rules/annotation.smk"
 include: "rules/phylogeny.smk"

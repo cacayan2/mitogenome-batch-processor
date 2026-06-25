@@ -81,6 +81,7 @@ rule trimming:
     # Defining params.
     params:
         output_dir=str(JOB_DIR / "trimming"),
+        working_dir=workflow.basedir,
         log_file=str(JOB_DIR / "logs" / "trimming" / "{sample}.log"),
         threads=config["tools"]["fastp"]["threads"],
         optional_args=fastp_optional_args(config),
@@ -92,12 +93,14 @@ rule trimming:
     # Shell script for running fastp through the execution layer.
     shell:
         """
+        python -m pip install -e . --quiet
+
         python -m mitopipeline.exec.run_fastp \
             --sample-id {wildcards.sample} \
             --in1 {input.r1} \
             --in2 {input.r2} \
             --output-dir {params.output_dir} \
-            --working-dir . \
+            --working-dir {params.working_dir} \
             --threads {params.threads} \
             --log-file {params.log_file} \
             {params.optional_args}

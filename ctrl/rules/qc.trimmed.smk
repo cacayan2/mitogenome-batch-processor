@@ -30,6 +30,7 @@ rule qc_trimmed:
     # Define params.
     params:
         output_dir = str(JOB_DIR / "qc" / "trimmed"),
+        working_dir = workflow.basedir,
         log_file = str(JOB_DIR / "logs" / "fastqc.trimmed" / "{sample}.log")
     # Define conda environment.
     conda: 
@@ -37,12 +38,14 @@ rule qc_trimmed:
     # Shell commands.
     shell:
         """
+        python -m pip install -e . --quiet
+
         python -m mitopipeline.exec.run_fastqc_trimmed \
             --sample-id {wildcards.sample} \
             --r1 {input.r1} \
             --r2 {input.r2} \
             --output-dir {params.output_dir} \
-            --working-dir . \
+            --working-dir {params.working_dir} \
             --log-file {params.log_file}
         
         touch {output.done}

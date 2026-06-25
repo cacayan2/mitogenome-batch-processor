@@ -25,6 +25,8 @@ rule annotation:
     # Shell script for running the annotation. 
     shell:
         """
+        python -m pip install -e . --quiet
+
         mkdir -p $(dirname {output.gff})
         echo "##gff-version 3" > {output.gff}
         """

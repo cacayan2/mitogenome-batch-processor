@@ -30,19 +30,22 @@ rule qc_raw:
     # Define params.
     params:
         output_dir = str(JOB_DIR / "qc" / "raw"),
-        log_file = str(JOB_DIR / "logs" / "fastqc.raw" / "{sample}.log")
+        working_dir = workflow.basedir,
+        log_file = str(JOB_DIR / "logs" / "fastqc.raw" / "{sample}.log"),
     # Define conda environment.
     conda: 
         "../../envs/qc.yaml"
     # Shell commands.
     shell:
         """
+        python -m pip install -e . --quiet
+
         python -m mitopipeline.exec.run_fastqc_raw \
             --sample-id {wildcards.sample} \
             --r1 {input.r1} \
             --r2 {input.r2} \
             --output-dir {params.output_dir} \
-            --working-dir . \
+            --working-dir {params.working_dir} \
             --log-file {params.log_file}
         
         touch {output.done}
