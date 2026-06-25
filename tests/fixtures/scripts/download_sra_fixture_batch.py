@@ -137,22 +137,55 @@ def find_cached_sra(sra_cache_dir: Path, sra_run: str) -> Path | None:
     return None
 
 
-def gzip_file(input_path: Path, output_path: Path) -> None:
-    """Compress a file using gzip."""
+def gzip_file(input_path: Path, output_path: Path, threads: int = 4) -> None:
+    """Compress a file using parallel gzip via pigz."""
 
-    with input_path.open("rb") as source:
-        with gzip.open(output_path, "wb") as target:
-            shutil.copyfileobj(source, target)
+    command = [
+        "pigz",
+        "-p", str(threads),
+        "-c",
+        str(input_path),
+    ]
+
+    with output_path.open("wb") as output_handle:
+        result = subprocess.run(command, stdout=output_handle, stderr=subprocess.PIPE, text=True)
+
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"pigz failed for {input_path}\n\nSTDERR:\n{result.stderr}"
+        )
 
 
-def count_fastq_records_gz(fastq_gz_path: Path) -> int:
-    """Count records in a gzipped FASTQ file."""
+def count_fastq_records_gz(fastq_gz_path: Path, threads: int = 4) -> int:
+    """Count records in a gzipped FASTQ file using pigz and wc."""
 
-    line_count = 0
+    pigz = subprocess.Popen(
+        ["pigz", "-dc", "-p", str(threads), str(fastq_gz_path)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
 
-    with gzip.open(fastq_gz_path, "rt", encoding="utf-8", errors="replace") as handle:
-        for line_count, _ in enumerate(handle, start=1):
-            pass
+    wc = subprocess.run(
+        ["wc", "-l"],
+        stdin=pigz.stdout,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+
+    if pigz.stdout is not None:
+        pigz.stdout.close()
+
+    pigz_stderr = pigz.stderr.read().decode() if pigz.stderr else ""
+    pigz_returncode = pigz.wait()
+
+    if pigz_returncode != 0:
+        raise RuntimeError(f"pigz failed while reading {fastq_gz_path}\n{pigz_stderr}")
+
+    if wc.returncode != 0:
+        raise RuntimeError(f"wc failed while counting {fastq_gz_path}\n{wc.stderr}")
+
+    line_count = int(wc.stdout.strip().split()[0])
 
     if line_count % 4 != 0:
         raise ValueError(f"FASTQ line count is not divisible by 4: {fastq_gz_path}")
@@ -180,9 +213,25 @@ def prepare_one_sample(row: dict[str, str],
     raw_r1 = output_fastq_dir / f"{sra_run}_1.fastq"
     raw_r2 = output_fastq_dir / f"{sra_run}_2.fastq"
 
-    if not overwrite and (final_r1.exists() or final_r2.exists()):
-        raise FileExistsError(f"FASTQ outputs already exist for {sample_id}. Use --overwrite.")
+    if final_r1.exists() and final_r2.exists() and not overwrite:
+        logger.info(f"Skipping {sample_id}; FASTQ outputs already exist.")
 
+        return {
+            "sample_id": sample_id,
+            "r1": str(final_r1),
+            "r2": str(final_r2),
+            "genus": genus,
+            "species": species,
+            "source": source,
+        }
+
+    if (final_r1.exists() != final_r2.exists()) and not overwrite:
+        raise FileExistsError(
+            f"Partial FASTQ outputs exist for {sample_id}. "
+            f"Found R1={final_r1.exists()}, R2={final_r2.exists()}. "
+            "Use --overwrite to regenerate."
+        )
+    
     cached_sra = find_cached_sra(sra_cache_dir, sra_run)
 
     if cached_sra is None:
@@ -214,14 +263,14 @@ def prepare_one_sample(row: dict[str, str],
         )
 
     logger.info(f"Compressing all reads for {sample_id}.")
-    gzip_file(raw_r1, final_r1)
-    gzip_file(raw_r2, final_r2)
+    gzip_file(raw_r1, final_r1, threads = threads)
+    gzip_file(raw_r2, final_r2, threads = threads)
 
     raw_r1.unlink(missing_ok=True)
     raw_r2.unlink(missing_ok=True)
 
-    r1_count = count_fastq_records_gz(final_r1)
-    r2_count = count_fastq_records_gz(final_r2)
+    r1_count = count_fastq_records_gz(final_r1, threads = threads)
+    r2_count = count_fastq_records_gz(final_r2, threads = threads)
 
     if r1_count != r2_count:
         raise ValueError(f"Read counts do not match for {sample_id}: R1={r1_count}, R2={r2_count}")
@@ -267,6 +316,8 @@ def main() -> int:
 
     require_command("prefetch")
     require_command("fasterq-dump")
+    require_command("pigz")
+    require_command("wc")
 
     source_rows = read_source_manifest(source_manifest)
 
