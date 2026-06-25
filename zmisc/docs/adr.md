@@ -17,13 +17,23 @@
 3. [Repository Structure and Project Design](#repository-structure-and-project-design)
 4. [Data Sources](#data-sources)
 5. [Overall Workflow Design](#overall-workflow-design)
-6. [Pipeline Workflow Management, Tool API, Object Oriented-Style, and Error Logging](#pipeline-workflow-management-tool-api-object-oriented-style-and-error-logging)
-7. [Quality Control](#quality-control)
-8. [Read Trimming and Filtering](#read-trimming-and-filtering)
-9. [Assembly](#assembly)
-10. [Genome Annotation, Visualization, and Phylogenetic Comparisons](#genome-annotation-visualization-and-phylogenetic-comparisons)
-11. [Statistics Generation of Assembled Genomes](#statistics-generation-of-assembled-genomes)
-12. [References](#references)
+6. [Testing Strategy](#testing-strategy)
+7. [Fixture Dataset Generation](#fixture-dataset-generation)
+8. [Pipeline Workflow Management, Tool API, Object Oriented-Style, and Error Logging](#pipeline-workflow-management-tool-api-object-oriented-style-and-error-logging)
+9. [Python Package Layout](#python-package-layout)
+10. [Dependency Isolation](#dependency-isolation)
+11. [Pipeline Job and Output Management](#pipeline-job-and-output-management)
+12. [Manifest Parsing Architecture](#manifest-parsing-architecture)
+13. [Configuration System](#configuration-system)
+14. [Execution Layer](#execution-layer)
+15. [Quality Control](#quality-control)
+16. [Read Trimming and Filtering](#read-trimming-and-filtering)
+17. [Assembly](#assembly)
+18. [Genome Annotation, Visualization, and Phylogenetic Comparisons](#genome-annotation-visualization-and-phylogenetic-comparisons)
+19. [Statistics Generation of Assembled Genomes](#statistics-generation-of-assembled-genomes)
+20. [NCBI and SRA Data Preparation](#ncbi-and-sra-data-preparation)
+21. [Future Extensibility](#future-extensibility)
+22. [References](#references)
 
 # Executive Summary and Project Goals
 ## Project Objective 
@@ -34,8 +44,8 @@ For the creation of this pipeline, additional focus will be on documentation, re
 ```{=typst}
 #align(center)[
 ```
-- [Repository](https://github.com/cacayan2/mitogenome-batch-processor.git)
-- [Project](https://github.com/users/cacayan2/projects/3/views/1)
+[Repository](https://github.com/cacayan2/mitogenome-batch-processor.git) \
+[Project](https://github.com/users/cacayan2/projects/3/views/1)
 ```{=typst}
 ]
 ```
@@ -260,8 +270,8 @@ To support these goals, a source-layout Python repository structure combined wit
 ```{=typst}
 #align(center)[
 ```
-- [Repository](https://github.com/cacayan2/mitogenome-batch-processor.git)
-- [Project](https://github.com/users/cacayan2/projects/3/views/1)
+[Repository](https://github.com/cacayan2/mitogenome-batch-processor.git) \
+[Project](https://github.com/users/cacayan2/projects/3/views/1)
 ```{=typst}
 ]
 ```
@@ -367,6 +377,67 @@ This staged design promotes modularity, reproducibility, and scalability. Indivi
 
 ---
 
+# Testing Strategy
+## Context and Technology Choice
+The pipeline integrates numerous independent software packages, including FastQC, GetOrganelle, MITOS2, and future annotation and phylogenetic tools. These applications perform computationally intensive analyses on FASTQ data and require large datasets. They usually depend on linux-based command-line software that may vary across computing environments - because failures can originate from either the Python implementation or the underlying bioinformatics software, testing is performed at multiple levels of abstraction.
+
+Testing is implemented using the [`pytest`](https://docs.pytest.org/en/stable/) framework and exists under the `./tests` directory. This directory is further divided into three sections:
+
+```{=typst}
+#rect(fill: luma(245), width: 100%, inset: 15pt)[
+```
+* **Unit Tests:** validate individual Python classes and functions in isolation. External software execution is mocked where appropriate to validate command construction, object behavior, logging, manifest parsing, statistics generation, and error handling without invoking bioinformatics tools.
+* **Integration Tests:** execute complete workflow components using representative datasets. These tests verify communication between Snakemake, execution wrappers, Tool API's, and external software ensuring that pipeline stages function correctly when executed together.
+* **Fixture Datasets:** provide reproducible biological inputs for testing. Small synthetic datasets are maintained within the repository for rapid execution, while larger biologically realistic datasets are generated directly from publicly available NCBI Sequence Read Archive (SRA) accessions using a dedicated fixture-generation utility. Real sequencing datasets are compressed and excluded from version control due to their size but scripts may be regenerated deterministcally from their accession numbers.
+```{=typst}
+]
+```
+
+## Justifications
+Bioinformatics pipelines generally consist of numerous independent processing stages that may execute for hours before producing results. Errors intorudced early in a workflow may not become apaprent until substantially later, making rapid debugging essential during the course of development. Separating tests into unit and integration levels allows failures to be localized efficiently while reducing the time required to validate incremental changes.
+
+Unit tests provide rapid feedback by isolating individual software components from external dependencies. By mocking command exection and validating data structure and object behavior independently, development can verify correctness of command generation, parameter validation, logging, manifest parsing, and data models without requiring installation or execution of computationally expensive bioinformatics tools.
+
+Integration tests complement this approach by validating interactions between Snakemake, Python API and execution wrappers, and external command-line applications. These tests ensure that independently validated components continue to function correclty when combined into complete workflow stages.
+
+A dedicated fixture-generation workflow was adopted instead of committing large sequencing datasets directly to version control. Public SRA accession numbers serve as the authoritative source for biological test data, allowing realistic datasets to be regenerated while keeping the repository lightweight and portable. This approach preserves reproducibility without introducing storage and maintenance challenges associated with distributing large FASTQ files.
+
+Together, the testing layers provide confidence in both the software implementation's and orchestration's performance in production settings. The resulting strategy improves maintainability, facilitates future refactoring, supports reproducible development, and reduces the likelihood of undetected failures propogating thorugh long-running analyses. 
+
+# Fixture Dataset Generation
+## Context and Technology Choice
+Real sequencing datasets are essential for validating the workflows under realistic operating conditions. However, raw sequencing data are frequently several gigabytes in size, making them unsuitable for storage within a source-controlled repository. Committing such datasets would unnecessarily increase repository size, complicate version control, and reduce portability for future developers.
+
+To address these limitations, the pipeline adopts a reproducible fixture-generation strategy based on publicly available [NCBI Sequence Read Archive (SRA)](https://www.ncbi.nlm.nih.gov/sra) accessions. Rather than distributing the raw sequencing reads, the repository stores a manifest containing accession identifiers and associated sample metadata. A dedicated fixture-generation utility downloads the specified entries, converts them into paired-end FASTQ files using the SRA Toolkit, compresses the resulting datasets, validates read integrity, and generates a mitopipeline-compatible sample manifest for downstream testing. 
+
+```{=typst}
+#rect(fill: luma(245), width: 100%, inset: 15pt)[
+```
+The datasets chosen are chosen both due to their size and read depth, increasing the likelihood of success for generating complete mtDNA genomes:
+
+* [**Lemon Shark: Negaprion brevirostris** (SRR23340818)](https://pmc.ncbi.nlm.nih.gov/articles/PMC10990291/)
+* [**Common Carp: Cyprinus carpio** (SRR12996635)](https://pmc.ncbi.nlm.nih.gov/articles/PMC7889141/)
+* [**Blue Mahsseer: Neolissochilus stracheyi** (SRR18356108)](https://pmc.ncbi.nlm.nih.gov/articles/PMC9387328/)
+* [**Korean Loach: Koreocobitis naktongensis** (SRR17652036)](https://pmc.ncbi.nlm.nih.gov/articles/PMC9275477/)
+* [**California Opaleye (Sea Chub 1): Girella nigricans** (SRR28380136)](https://pmc.ncbi.nlm.nih.gov/articles/PMC11646298/)
+* [**Zebra Perch (Sea Chub 2): Kyphosus azureus** (SRR28380135)](https://pmc.ncbi.nlm.nih.gov/articles/PMC11646298/)
+```{=typst}
+]
+```
+
+This approach produces biologically realistic test data without compromising repository bulk. Temporary SRA downloads function only as intermediate artifacts during fixture generation and are not required for subsequent pipeline execution once compressed FASTQ fixtures have been created.
+
+## Justifications
+The selected approach priorritizes reproducibility, maintainability, and efficient storage without sacrificing biological realism.
+
+Using publicly accessible SRA accessions ensures that fixture datasets can be regenerated deterministically by any developer with access to the SRA Toolkit. Because the accession identifiers remain stable, the repository records only the information necessary to reproduce the datasets rather than distributing large binary files directly. 
+
+Generating compressed FASTQ files instead of storing uncompressed sequencing data substantially reduces disk usage while preserving compatibility with downstream bioinformatics software. Most contemporary sequencing tools, including [`FastQC`](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/), [`fastp`](https://github.com/opengene/fastp), and [`GetOrganelle`](https://github.com/kinggerm/getorganelle) operate directly on compressed FASTQ files, eliminating the need for decompression during routine pipeline execution. 
+
+The fixture-generation workflow performs validation by verifying successful download, confirming paired FASTQ generation, compressing outputs, and comparing read counts between forward and reverse read files. These validation steps ensure that generated fixture datasets are complete and internally consistent before they are incorporated into integration testing.
+
+Separating fixture generation from routine pipeline execution also reduces unnecessary compuational overhead. Developers typically generate the biological fixtures once and reuse them throughout development, while the accession manifest preserves the ability to regenerate the datasets whenever required. This architecture balances reproducibility, storage, efficiency, and realistic biological testing while maintaining a clear and portable software repository.
+
 # Pipeline Workflow Management, Tool API, Object Oriented-Style, and Error Logging
 ## Context and Technology Choice
 The pipeline will be orchestrated using [`Snakemake`](https://snakemake.readthedocs.io/en/stable/) as the workflow management system. Individual bioinformatics tools will not be invoked directly from workflow definitions. Instead, each tool will be accessed through a dedicated Python API layer responsible for command construction, parameter validation, execution, and result reporting.
@@ -452,6 +523,140 @@ This approach significantly improves usability during execution while preserved 
 Object-oriented design was pulled from previous experience with Java and C++ and allows for a modular and easily interpretable reverse-engineering process for future developers. This allows for ease of adding future tool API's (should newer or better tools be found to suit the problem) and streamlines development process by codifying contracts of expected behavior for different entities in the pipeline. While Python's interpreted nature allows for easier *ad hoc* pipeline building, integrating object-oriented design principles elevate this project from a single application to a generalized pipeline that could even be adapted outside of generating mitochondrial genomes. 
 
 ---
+
+# Python Package Layout
+## Context and Technology Choice
+As the mitopipeline expanded beyond a collection of Snakemake rules and standalone scripts, the project required a modular software architecture capable of supporting multiple workflow stages, external bioinformatics tools, reusable data models, and future pipeline extensions. Organizing all functionality within a single module or collection of utility scripts would have resulted in tightly coupled code, duplicated logic, and increasing maintenance complexity as additional features were introduced.
+
+To address these concerns, the pipeline is implemented as an installable Python package (mitopipeline) organized according to functional responsibilities rather than individual workflow stages. The package separates orchestration, external software interfaces, execution wrappers, domain models, utilities, logging, statistics, and reporting into independent modules with clearly defined responsibilities.
+
+```{=typst}
+#rect(fill: luma(245), width: 100%, inset: 15pt)[
+```
+The package architecture follows a layered design:
+
+* **`launcher/`** contains the high-level pipeline orchestration responsible for coordinating workflow execution.
+* **`api/`** provides object-oriented interfaces for interacting with external bioinformatics software, encapsulating command construction and execution behind a common abstraction.
+* **`exec/`** serves as the interface between Snakemake rules and the Python package, providing lightweight execution wrappers for individual pipeline stages.
+* **`models/`** defines the core domain objects used throughout the pipeline, including samples, pipeline jobs, and command execution results.
+* **`manifest/`** implements parsing and validation of sample manifests, producing strongly typed objects for downstream processing.
+* **`logging/`** centralizes logging configuration to ensure consistent console and file output across all workflow stages.
+* **`stats/`** contains parsers and summary utilities for extracting metrics from tool-generated outputs.
+* **`reporting/`** provides reusable components for generating pipeline reports and summary artifacts.
+* **`utils/`** contains supporting utilities that do not belong to a specific workflow stage, such as external database setup and miscellaneous helper functionality.
+```{=typst}
+]
+```
+
+By organizing functionality according to software responsibility rather than pipeline stage, the package remains modular, extensible, and easier to maintain as additional bioinformatics tools and workflow stages are incorporated.
+
+## Justifications
+Separating the package into functionally distinct modules promotes maintainability by ensuring that each component is responsible for a single aspect of the pipeline. Changes to workflow orchestration, external software interfaces, logging, reporting, or data models can therefore be implemented independently without requiring widespread modifications throughout the codebase. This separation of concerns reduces coupling between components and simplifies future development.
+
+Encapsulating external bioinformatics software within dedicated Tool API classes isolates command construction and software-specific behavior from the remainder of the pipeline. As a result, modifications to software versions, command-line arguments, or even replacement of individual tools can be performed with minimal impact on the surrounding workflow logic. This abstraction also enables consistent error handling, logging, and command execution across all pipeline stages.
+
+The use of strongly typed domain models for pipeline jobs, samples, and command execution results improves code readability while reducing the reliance on loosely structured dictionaries and ad hoc data passing. Centralizing these shared data structures establishes a common interface between workflow stages and minimizes duplication throughout the codebase.
+
+Separating execution wrappers from both workflow orchestration and tool implementations provides a clean interface between Snakemake and the Python package. Individual pipeline stages remain lightweight, while reusable software components can be invoked independently of the workflow engine if required for testing, scripting, or future command-line interfaces.
+
+Finally, organizing the package according to software responsibilities rather than individual workflow stages provides a scalable foundation for future development. Additional bioinformatics tools, reporting modules, statistical analyses, and workflow stages can be incorporated by extending existing modules without requiring substantial architectural refactoring. This modular design supports long-term maintainability while preserving clear boundaries between independent software components.
+
+# Dependency Isolation
+## Context and Technology Choice
+The mitopipeline integrates multiple third-party bioinformatics applications that were developed independently and often require conflicting software libraries, compiler versions, or runtime environments. Installing all pipeline dependencies within a single shared environment increases the likelihood of package incompatibilities, version conflicts, and irreproducible software behavior. These challenges are particularly common in bioinformatics, where software packages may depend on different versions of Python, system libraries, or external executables.
+
+To ensure reproducible execution across all workflow stages, the pipeline adopts stage-specific software environments managed by [`Conda`](https://docs.conda.io/) and automatically provisioned through [`Snakemake`](https://snakemake.readthedocs.io/). Each major workflow stage is associated with an independent environment specification located within the `envs/` directory. These environment definitions explicitly declare the software packages and versions required to execute a given stage while remaining isolated from the dependencies of other stages.
+
+During pipeline execution, Snakemake automatically creates and activates the appropriate environment for each rule, ensuring that every bioinformatics application executes using its intended software stack. This design eliminates manual environment management for end users while preserving compatibility between independently developed bioinformatics tools.
+
+## Justifications
+Isolating dependencies at the workflow-stage level improves reproducibility by ensuring that each bioinformatics application executes within a controlled and deterministic software environment. Because environment specifications explicitly define package versions and installation sources, pipeline behavior remains consistent across operating systems, development machines, and future software installations.
+
+Separate environments significantly reduce the risk of dependency conflicts that commonly arise when combining independently developed bioinformatics software. Individual tools may require incompatible versions of shared libraries or language runtimes; isolating these dependencies prevents modifications made for one workflow stage from inadvertently affecting another.
+
+This architecture also improves maintainability by allowing software components to be updated independently. Upgrading or replacing a single bioinformatics tool requires modifications only to the corresponding environment specification rather than reconstruction or validation of a monolithic software environment. Consequently, software maintenance becomes more localized and less disruptive to the remainder of the pipeline.
+
+Finally, delegating environment management to [`Snakemake`](https://snakemake.readthedocs.io/) simplifies pipeline execution for end users. Developers and researchers are not required to manually create, activate, or maintain multiple software environments before running the workflow. Instead, environment creation and activation are performed automatically, reducing configuration errors while improving the portability and reproducibility of the pipeline.
+
+# Pipeline Job and Output Management
+## Context and Technology Choice
+Bioinformatics workflows frequently generate numerous intermediate files, quality reports, assemblies, annotations, and summary artifacts during execution. Writing outputs directly into the input data directory or overwriting previous analyses complicates reproducibility, hinders debugging, and increases the likelihood of accidental data loss. Furthermore, multiple executions of the same pipeline may be performed using different software versions, parameters, or datasets, requiring each analysis to remain isolated for future reference.
+
+To address these challenges, the mitopipeline adopts a job-oriented execution model centered around the `PipelineJob` domain object. Each pipeline execution is represented by a unique job instance responsible for managing execution metadata, output locations, runtime information, and workflow state. Upon initialization, each job is assigned a unique identifier and corresponding output directory, ensuring that all artifacts generated during execution remain isolated from previous or concurrent pipeline runs.
+
+Pipeline outputs are organized hierarchically beneath a job-specific output directory, allowing all workflow products—including quality control reports, trimmed reads, assemblies, annotations, phylogenetic analyses, logs, and summary reports—to be associated with a single execution. This organization establishes a reproducible record of every pipeline run while simplifying downstream inspection, debugging, and archival.
+
+
+## Justifications
+A job-oriented execution model improves reproducibility by preserving the complete set of outputs generated during each pipeline execution. Rather than overwriting existing files, each analysis is stored independently, allowing previous results to be inspected, compared, or reproduced without requiring additional execution of the workflow.
+
+Separating outputs by pipeline job also simplifies debugging and failure recovery. Because intermediate files, logs, and final outputs remain associated with a single execution, developers can more easily identify the source of failures, inspect partially completed analyses, and compare behavior across different software versions or configuration settings.
+
+Encapsulating execution metadata within the `PipelineJob` model establishes a centralized representation of workflow state throughout the pipeline. Runtime information, output locations, timestamps, configuration details, and future execution metadata can be managed consistently through a single domain object rather than being distributed across individual workflow stages.
+
+Finally, organizing outputs by job provides a scalable foundation for future pipeline extensions. Additional workflow stages, reporting modules, provenance tracking, execution statistics, and metadata collection can be incorporated without modifying the overall directory structure or disrupting existing analyses. This architecture promotes maintainability while preserving a clear and reproducible history of pipeline execution.
+
+# Manifest Parsing Architecture
+## Context and Technology Choice
+The mitopipeline is designed to process one or more biological samples without requiring modifications to the workflow implementation. To achieve this flexibility, sample-specific information—including sample identifiers, input FASTQ file locations, taxonomic metadata, and optional annotations—is stored externally within a tab-delimited sample manifest. This design separates biological data from workflow logic, allowing the same pipeline implementation to be reused across different projects and datasets.
+
+The pipeline implements a dedicated manifest parsing layer responsible for validating, interpreting, and converting manifest entries into strongly typed `Sample` domain objects before pipeline execution begins. The parser verifies the presence of required columns, validates input file existence, resolves relative file paths with respect to the manifest location, and supports optional metadata fields while maintaining compatibility with minimally specified manifests.
+
+Rather than allowing individual workflow stages to interpret manifest files independently, all manifest processing is centralized within a single parser. This establishes a consistent interface between user-provided metadata and the remainder of the pipeline while ensuring that invalid or incomplete manifests are detected before computationally intensive analyses begin.
+
+## Justifications
+Separating sample metadata from workflow implementation improves flexibility by allowing the same pipeline to process arbitrary collections of sequencing datasets without requiring modifications to the underlying software. New projects can therefore be executed simply by providing a new manifest rather than editing workflow code or configuration files.
+
+Centralizing manifest parsing within a dedicated software component promotes consistency and maintainability. Validation rules, path resolution, metadata interpretation, and error handling are implemented in a single location, eliminating duplicated logic across workflow stages and reducing the likelihood of inconsistent behavior.
+
+Converting manifest entries into strongly typed `Sample` objects provides a well-defined interface between user input and pipeline execution. Downstream components operate on validated domain objects rather than raw tabular data, improving code readability, reducing repetitive validation, and minimizing opportunities for malformed input to propagate throughout the workflow.
+
+Early validation of manifests also improves user experience and computational efficiency. Errors such as missing columns, nonexistent FASTQ files, malformed paths, or invalid metadata are detected before execution of external bioinformatics software, preventing long-running analyses from failing due to simple input errors.
+
+Finally, supporting optional metadata fields while enforcing a minimal required schema balances usability with extensibility. The manifest format can evolve to incorporate additional biological annotations, experimental metadata, or downstream analysis parameters without requiring substantial modifications to the parser or workflow architecture, ensuring that the pipeline remains adaptable to future research needs.
+
+# Configuration System
+## Context and Technology Choice
+The mitopipeline is intended to support multiple execution scenarios, including development, testing, production analyses, selective stage execution, and future workflow extensions. Embedding configuration parameters directly within workflow rules or Python source code would require software modifications whenever execution behavior changes, reducing maintainability and increasing the likelihood of configuration errors.
+
+To decouple workflow behavior from software implementation, the pipeline adopts an external configuration system based on YAML configuration files. Configuration files define execution parameters such as input manifests, output directories, stage selection, software-specific parameters, reference database locations, and other pipeline settings. These configuration files are supplied to the workflow at runtime through [`Snakemake`](https://snakemake.readthedocs.io/), allowing a single workflow implementation to support multiple execution contexts without modification.
+
+Multiple configuration profiles are maintained for different development and testing scenarios, including production execution, fixture-based testing, and selective workflow execution. This approach enables developers to rapidly switch between execution environments while preserving a consistent software architecture.
+
+## Justifications
+Externalizing configuration improves maintainability by separating workflow behavior from software implementation. Pipeline parameters can be modified without editing Python modules or Snakemake rules, reducing the likelihood of introducing software defects while simplifying routine workflow customization.
+
+Using human-readable YAML configuration files improves usability for both developers and end users. Configuration parameters remain easily inspectable, version controlled, and reproducible while requiring minimal technical knowledge to modify. Because configuration files are stored alongside the repository, execution settings can be documented, reviewed, and reproduced across different computing environments.
+
+Supporting multiple configuration profiles enables the same pipeline implementation to operate across diverse execution scenarios, including software development, automated testing, production analyses, and future deployment environments. Developers can validate individual workflow stages or execute reduced testing configurations without modifying the underlying workflow logic.
+
+Centralizing configuration management also promotes consistency throughout the pipeline. Workflow stages retrieve execution parameters from a single authoritative source rather than maintaining independent configuration logic, reducing duplication and ensuring that parameter changes are propagated uniformly across all components.
+
+Finally, separating configuration from implementation provides a scalable foundation for future development. Additional workflow stages, software parameters, execution modes, and deployment targets can be introduced by extending configuration files rather than restructuring the software architecture, preserving flexibility while maintaining a clean separation between pipeline behavior and implementation.
+
+# Execution Layer
+## Context and Technology Choice
+
+The mitopipeline coordinates multiple independently developed bioinformatics applications that expose heterogeneous command-line interfaces, input requirements, and output formats. Directly invoking these applications from workflow rules would tightly couple the workflow engine to software-specific implementation details, reducing maintainability and making future software replacement more difficult.
+
+To establish a clear separation between workflow orchestration and software execution, the pipeline adopts a layered execution architecture. [`Snakemake`](https://snakemake.readthedocs.io/) is responsible for dependency resolution, scheduling, and workflow orchestration, while lightweight execution wrapper modules located within the `exec/` package provide the interface between workflow rules and the Python package. These execution wrappers instantiate the appropriate Tool API classes, configure software parameters, and invoke the corresponding external bioinformatics applications.
+
+Each Tool API inherits from a common `BaseTool` abstraction that standardizes command construction, process execution, logging, error handling, and command result reporting. This layered architecture isolates software-specific implementation details from both the workflow engine and higher-level pipeline logic while providing a consistent execution interface across all supported bioinformatics applications.
+
+The resulting execution hierarchy is organized as follows:
+
+![Execution Diagram, Created with Canva](images/execution_diagram.png){ width=50% }
+
+## Justifications
+Separating workflow orchestration from software execution promotes modularity by ensuring that each architectural layer is responsible for a single aspect of pipeline execution. Snakemake manages workflow scheduling and dependencies, execution wrappers coordinate individual pipeline stages, Tool APIs encapsulate software-specific behavior, and the `BaseTool` abstraction provides common execution functionality shared across all external applications.
+
+Introducing execution wrappers creates a stable interface between Snakemake and the Python package. Workflow rules remain concise and focused on data dependencies while execution logic is centralized within reusable Python modules. This separation improves readability and allows individual pipeline stages to be executed independently for testing or future command-line interfaces.
+
+Encapsulating external software within Tool API classes improves maintainability by isolating command-line syntax, parameter construction, and software-specific behavior from the remainder of the pipeline. Modifications to software versions, command-line arguments, or even replacement of an individual application can therefore be implemented with minimal impact on workflow orchestration or downstream components.
+
+The `BaseTool` abstraction further reduces code duplication by centralizing common functionality such as subprocess execution, logging, error handling, and command result management. Standardizing these behaviors promotes consistency across all pipeline stages while simplifying implementation of additional bioinformatics tools.
+
+Finally, the layered execution architecture provides a scalable foundation for future workflow expansion. Additional bioinformatics applications can be incorporated by implementing new Tool API classes and lightweight execution wrappers while preserving the existing orchestration framework and software interfaces. This design improves extensibility, maintainability, and long-term sustainability of the pipeline.
 
 # Quality Control
 ## Context and Technology Choice
@@ -597,6 +802,25 @@ Preparation of archival materials provides significant practical value while rem
 Separating archive preparation from submission ensures that a baseline deliveable that can be completed regardless of repository requirements. But this keeps the door open for CLI-based submission workflows and allows the project to continue exploring additional automation without compromising development of core utilities.
 
 Integrating the archival preparation extends the project's usefulness beyond analysis - the pipeline becomes capable of supporting the complete lifecycle of a reference database. This approach maintains a balance between the scope/timeline of the project, complexity, and usefulness while remaining faithful to the short and long-term needs of the Stuart lab.
+
+# Future Extensibility
+## Context and Technology Choice
+The mitopipeline is intended to serve as a long-term research platform rather than a fixed implementation of a single bioinformatics workflow. Although the current pipeline focuses on quality control, read preprocessing, mitochondrial genome assembly, annotation, phylogenetic analysis, and reporting, future research objectives may require the incorporation of additional software tools, workflow stages, statistical analyses, and downstream data products.
+
+To support long-term evolution of the project, the software architecture emphasizes modularity, abstraction, and separation of responsibilities throughout the workflow. Individual pipeline stages are implemented as independent components connected through well-defined interfaces, allowing new functionality to be integrated without requiring extensive modifications to the existing architecture. Workflow orchestration is delegated to [`Snakemake`](https://snakemake.readthedocs.io/), while external bioinformatics software is encapsulated through reusable Tool API classes, enabling new applications to be incorporated alongside existing implementations.
+
+The repository structure, configuration system, package organization, testing strategy, and dependency management were all designed with extensibility as a primary architectural objective, ensuring that the pipeline can evolve alongside future research requirements while maintaining software maintainability and reproducibility.
+
+## Justifications
+Designing the pipeline as a collection of modular and loosely coupled components minimizes the effort required to introduce new functionality. Additional workflow stages can be incorporated by implementing new execution wrappers, Tool API classes, configuration parameters, and Snakemake rules without requiring significant modifications to existing software components.
+
+The use of standardized interfaces throughout the pipeline promotes software reuse and simplifies maintenance. New bioinformatics applications can be integrated using the same execution patterns, logging infrastructure, configuration management, and testing framework already established within the project, reducing duplication and improving consistency across workflow stages.
+
+Maintaining a modular architecture also improves adaptability as bioinformatics software evolves. Existing tools may eventually become deprecated or superseded by newer algorithms; encapsulating software-specific behavior within dedicated interfaces enables these replacements to occur with minimal impact on the remainder of the pipeline.
+
+Future extensibility additionally supports the incorporation of new analytical capabilities, including alternative assembly algorithms, comparative genomics workflows, expanded statistical analyses, additional reporting formats, cloud or high-performance computing deployment, containerized execution using [`Docker`](https://www.docker.com/) or [`Apptainer`](https://apptainer.org/), and integration with public sequence repositories such as [`GenBank`](https://www.ncbi.nlm.nih.gov/genbank/) and the [`Sequence Read Archive (SRA)`](https://www.ncbi.nlm.nih.gov/sra).
+
+By explicitly prioritizing extensibility during architectural design, the pipeline establishes a sustainable software foundation capable of supporting future research objectives while minimizing technical debt, reducing maintenance effort, and preserving reproducibility as the project continues to grow.
 
 # References
 Altenritter, M., & Casper, A. F. (2018, September 24). Evaluating the potential responses of native fish and mussels to proposed separation of Lake Michigan from the Illinois River Waterway at Brandon Road Lock and Dam. https://www.researchgate.net/publication/327845663_Evaluating_the_potential_responses_of_native_fish_and_mussels_to_proposed_separation_of_Lake_Michigan_from_the_Illinois_River_Waterway_at_Brandon_Road_Lock_and_Dam
