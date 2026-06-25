@@ -60,10 +60,6 @@ def test_snakemake_placeholder_workflow_execution():
     # Defining fixture output directory.
     output_dir = Path("tests/fixtures/outputs/test_job")
 
-    # Removing previous test outputs.
-    if output_dir.exists():
-        shutil.rmtree(output_dir)
-
     try:
         # Running Snakemake workflow.
         result = subprocess.run(

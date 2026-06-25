@@ -16,15 +16,11 @@ def test_getorganelle_exec_layer_through_snakemake_real_data():
     """Integration test confirming Snakemake executes GetOrganelle on real fixture data."""
 
     # Defining test paths.
-    sample_id = "lemon_shark_001"
+    sample_id = "common_carp_001"
     output_dir = Path("tests/fixtures/outputs/test_job")
     assembly_dir = output_dir / "assembly"
     log_file = output_dir / "logs" / "assembly" / f"{sample_id}.log"
     target = assembly_dir / f"{sample_id}.assembly.done"
-
-    # Removing previous test outputs.
-    if output_dir.exists():
-        shutil.rmtree(output_dir)
 
     try:
         # Running the GetOrganelle assembly rule through Snakemake.
@@ -37,7 +33,7 @@ def test_getorganelle_exec_layer_through_snakemake_real_data():
                 "tests/fixtures/config/config_getorganelle_real.yaml",
                 "--use-conda",
                 "--cores",
-                "4",
+                "20",
                 str(target),
             ],
             capture_output=True,

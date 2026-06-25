@@ -28,6 +28,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", help = "Path to the output directory.", required = True)
     parser.add_argument("--working-dir", help = "Path to the working directory.", required = True)
     parser.add_argument("--log-file", help = "Path to the logger.", required = True)
+    parser.add_argument("--threads", help = "Number of threads.", required = True)
 
     # Return the parsed arguments.
     return parser.parse_args()
@@ -81,7 +82,8 @@ def main() -> int:
             sample = sample, 
             output_dir = Path(args.output_dir), 
             working_dir = Path(args.working_dir), 
-            logger = logger
+            logger = logger,
+            threads = args.threads,
         )
 
         # Running FastQC and obtaining CommandResult.

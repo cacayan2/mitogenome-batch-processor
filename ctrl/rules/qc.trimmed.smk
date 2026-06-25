@@ -35,7 +35,8 @@ rule qc_trimmed:
     params:
         output_dir = str(JOB_DIR / "qc" / "trimmed"),
         working_dir = str(Path.cwd()),
-        log_file = str(JOB_DIR / "logs" / "fastqc.trimmed" / "{sample}.log")
+        log_file = str(JOB_DIR / "logs" / "fastqc.trimmed" / "{sample}.log"),
+        threads = config["tools"]["fastqc.trimmed"]["threads"]
     # Define conda environment.
     conda: 
         "../../envs/qc.yaml"
@@ -50,7 +51,8 @@ rule qc_trimmed:
             --r2 {input.r2} \
             --output-dir {params.output_dir} \
             --working-dir {params.working_dir} \
-            --log-file {params.log_file}
+            --log-file {params.log_file} \
+            --threads {params.threads}
         
         touch {output.done}
         """

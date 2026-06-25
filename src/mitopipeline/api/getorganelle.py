@@ -9,6 +9,7 @@ from mitopipeline.models.sample import Sample
 from mitopipeline.models.command_result import CommandResult
 from pathlib import Path
 from logging import Logger
+import shutil
 import os
 
 # Constants
@@ -56,6 +57,28 @@ class GetOrganelleRunner(BaseTool):
         self.organelle_type = organelle_type
         self.tool_options = tool_options or {}
 
+    def normalize_outputs(self) -> None:
+        """Copy GetOrganelle outputs to standardized mitopipeline output names."""
+
+        # Obtaining fasta and gfa candidates. 
+        fasta_candidates = list(self.output_dir.glob("*.path_sequence.fasta"))
+        gfa_candidates = list(self.output_dir.glob("*.selected_graph.gfa"))
+
+        # Validating candidate files. 
+        if not fasta_candidates:
+            raise FileNotFoundError("No GetOrganelle path_sequence FASTA output found.")
+
+        if not gfa_candidates:
+            raise FileNotFoundError("No GetOrganelle selected_graph GFA output found.")
+
+        # Creating fasta outputs and gfa outputs.
+        fasta_output = self.output_dir / f"{self.sample.sample_id}.fasta"
+        gfa_output = self.output_dir / f"{self.sample.sample_id}.gfa"
+
+        # Copying outputs.
+        shutil.copy2(fasta_candidates[0], fasta_output)
+        shutil.copy2(gfa_candidates[0], gfa_output)
+
     def validate_inputs(self):
         """Validate inputs for the GetOrganelleRunner.
 
@@ -98,28 +121,72 @@ class GetOrganelleRunner(BaseTool):
         return self._add_additional_getorganelle_args(command)
 
     def validate_outputs(self) -> None:
-        """Validate outputs for the GetOrganelleRunner.
+        """Validate and normalize GetOrganelle outputs.
 
-        Raises value errors if outputs are invalid and send to the logger.
+        GetOrganelle produces output filenames based on organelle type, k-mer size,
+        graph number, and result status. The pipeline standardizes those outputs
+        to sample-specific filenames expected by Snakemake.
 
         Returns:
             None
         """
-        # Obtaining the expected output files.
         outputs = self._expected_getorganelle_outputs()
 
-        for expected_file in outputs:
-            if not expected_file.exists():
-                if self.logger is not None: self.logger.error(f"({self.tool_name}) Expected output file {expected_file} does not exist.")
-                raise FileNotFoundError(f"({self.tool_name}) Expected output file {expected_file} does not exist.")
+        for output in outputs:
+            if not output.exists():
+                if self.logger is not None:
+                    self.logger.error(
+                        f"({self.tool_name}) Expected output file {output} does not exist."
+                    )
+                raise FileNotFoundError(
+                    f"({self.tool_name}) Expected output file {output} does not exist."
+                )
 
-    def run(self) -> CommandResult:
-        """Runs the GetOrganelleRunner and returns a CommandResult object.
 
-        Returns:
-            CommandResult: The result of running the GetOrganelleRunner.
+    def _normalize_getorganelle_outputs(self) -> None:
+        """Copy GetOrganelle outputs to standardized mitopipeline output names."""
+
+        fasta_candidates = sorted(self.output_dir.glob("*.path_sequence.fasta"))
+        gfa_candidates = sorted(self.output_dir.glob("*.selected_graph.gfa"))
+
+        if len(fasta_candidates) != 1:
+            raise RuntimeError(
+                f"({self.tool_name}) Expected exactly one GetOrganelle path_sequence FASTA "
+                f"in {self.output_dir}, found {len(fasta_candidates)}: {fasta_candidates}"
+            )
+
+        if len(gfa_candidates) != 1:
+            raise RuntimeError(
+                f"({self.tool_name}) Expected exactly one GetOrganelle selected_graph GFA "
+                f"in {self.output_dir}, found {len(gfa_candidates)}: {gfa_candidates}"
+            )
+
+        standardized_fasta = self.output_dir / f"{self.sample.sample_id}.fasta"
+        standardized_gfa = self.output_dir / f"{self.sample.sample_id}.gfa"
+
+        shutil.copy2(fasta_candidates[0], standardized_fasta)
+        shutil.copy2(gfa_candidates[0], standardized_gfa)
+
+        if self.logger is not None:
+            self.logger.info(
+                f"({self.tool_name}) Normalized FASTA output: "
+                f"{fasta_candidates[0]} -> {standardized_fasta}"
+            )
+            self.logger.info(
+                f"({self.tool_name}) Normalized GFA output: "
+                f"{gfa_candidates[0]} -> {standardized_gfa}"
+            )
+
+
+    def _expected_getorganelle_outputs(self) -> list[Path]:
+        """Return standardized mitopipeline output files for GetOrganelle.
+        
+        Returns: list[Path] A list of the expected outputs.
         """
-        return super().run()
+        return [
+            self.output_dir / f"{self.sample.sample_id}.fasta",
+            self.output_dir / f"{self.sample.sample_id}.gfa",
+        ]
 
     def _expected_getorganelle_outputs(self):
         """Returns the expected output files for GetOrganelleRunner.
@@ -188,3 +255,11 @@ class GetOrganelleRunner(BaseTool):
                 command.append(flag)
 
         return command
+    
+    def postprocess_outputs(self) -> None:
+        """Postprocessing hook after running a successful command.
+
+        Returns:
+            None
+        """
+        self._normalize_getorganelle_outputs()

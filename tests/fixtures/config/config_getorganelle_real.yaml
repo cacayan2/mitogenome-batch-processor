@@ -1,7 +1,7 @@
 output_root: tests/fixtures/outputs
-manifest: tests/fixtures/manifests/valid_real_sra.tsv
-job_id: test_job
+manifest: tests/fixtures/manifests/mitopipeline_fixture_manifest_real.tsv
 input_dir: tests/fixtures/manifest/fastq_real
+job_id: test_job
 
 stages:
   qc_raw: true
@@ -13,8 +13,10 @@ stages:
   reporting: false
 
 tools:
+  fastqc.raw:
+    threads: 20
   fastp:
-    threads: 4
+    threads: 20
     detect_adapter_for_pe: true
     length_required: 50
     qualified_quality_phred: 20
@@ -26,11 +28,12 @@ tools:
     trim_poly_g: false
     disable_trim_poly_g: false
     trim_poly_x: false
-
+  fastqc.trimmed:
+    threads: 20
   getorganelle:
-    threads: 4
+    threads: 20
     organelle_type: animal_mt
     database_type: animal_mt
     initialize_database: true
     overwrite: true
-    max_reads: 50000
+    max_reads: null

@@ -105,6 +105,15 @@ class BaseTool(ABC):
             return command_result
 
         # Only validate outputs after successful execution.
+        self.postprocess_outputs()
         self.validate_outputs()
 
         return command_result
+    
+    def postprocess_outputs(self) -> None:
+        """Optional hook executed after a successful command.
+        
+        Returns:
+            None
+        """
+        pass

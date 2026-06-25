@@ -20,6 +20,7 @@ class FastQCRunner(BaseTool):
                  sample: Sample,
                  logger: Logger | None = None,
                  tool_name: str = "fastqc",
+                 threads: int = 4,
                  ):        
         """Initialize FastQCRunner.
         
@@ -32,6 +33,7 @@ class FastQCRunner(BaseTool):
         super().__init__(tool_name=tool_name, working_dir=working_dir, logger=logger)
         self.sample = sample
         self.output_dir = output_dir
+        self.threads = threads
 
     def validate_inputs(self) -> None:
         """Validate inputs for the FastQCRunner. 
@@ -52,6 +54,8 @@ class FastQCRunner(BaseTool):
         """Builds the command to run FastQC on raw sequencing reads. Also creates the output directory if not already created."""
         self.output_dir.mkdir(parents = True, exist_ok = True)
         return ["fastqc", 
+                "--threads",
+                str(self.threads),
                 str(self.sample.r1), 
                 str(self.sample.r2), 
                 "-o", 

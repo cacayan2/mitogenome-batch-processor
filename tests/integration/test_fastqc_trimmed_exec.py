@@ -21,10 +21,6 @@ def test_fastqc_raw_exec_layer_through_snakemake():
     log_file = output_dir / "logs" / "fastqc" / "sample_001.raw.log"
     target = qc_dir / "sample_001_R1_fastqc.html"
 
-    # Removing previous test outputs.
-    if output_dir.exists():
-        shutil.rmtree(output_dir)
-
     try:
         # Running the raw FastQC rule through Snakemake.
         result = subprocess.run(
@@ -53,6 +49,4 @@ def test_fastqc_raw_exec_layer_through_snakemake():
         assert log_file.exists()
 
     finally:
-        # Cleanup.
-        if output_dir.exists():
-            shutil.rmtree(output_dir)
+        pass

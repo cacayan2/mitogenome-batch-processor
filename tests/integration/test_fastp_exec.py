@@ -20,10 +20,6 @@ def test_fastp_exec_layer_through_snakemake():
     log_file = output_dir / "logs" / "trimming" / "sample_001.log"
     target = trimming_dir / "sample_001_R1.trimmed.fastq.gz"
 
-    # Removing previous test outputs.
-    if output_dir.exists():
-        shutil.rmtree(output_dir)
-
     try:
         # Running the fastp trimming rule through Snakemake.
         result = subprocess.run(
@@ -51,6 +47,4 @@ def test_fastp_exec_layer_through_snakemake():
         assert log_file.exists()
 
     finally:
-        # Cleanup.
-        if output_dir.exists():
-            shutil.rmtree(output_dir)
+        pass
