@@ -3,6 +3,9 @@
 Contains rules for reporting execution.
 """
 
+# Imports
+from pathlib import Path
+
 rule reporting:
     """
     Rule for generating a report for a given sample.

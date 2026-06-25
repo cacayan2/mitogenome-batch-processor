@@ -3,6 +3,9 @@
 Contains rules for assembly execution.
 """
 
+# Imports
+from pathlib import Path
+
 def getorganelle_database_input(config):
     """Return GetOrganelle database setup dependency if enabled."""
 
@@ -98,7 +101,7 @@ rule assembly:
     # Define parameters.
     params:
         output_dir=str(JOB_DIR / "assembly"),
-        working_dir = workflow.basedir,
+        working_dir = str(Path.cwd()),
         log_file=str(JOB_DIR / "logs" / "assembly" / "{sample}.log"),
         threads=config["tools"]["getorganelle"]["threads"],
         organelle_type=config["tools"]["getorganelle"]["database_type"],

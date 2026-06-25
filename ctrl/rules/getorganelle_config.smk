@@ -3,6 +3,9 @@
 Contains rules for GetOrganelle database initialization.
 """
 
+# Imports
+from pathlib import Path
+
 rule getorganelle_config:
     """initialize GetOrganelle reference databases."""
 

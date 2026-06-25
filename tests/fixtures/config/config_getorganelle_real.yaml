@@ -1,0 +1,36 @@
+output_root: tests/fixtures/outputs
+manifest: tests/fixtures/manifests/valid_real_sra.tsv
+job_id: test_job
+input_dir: tests/fixtures/manifest/fastq_real
+
+stages:
+  qc_raw: true
+  trimming: true
+  qc_trimmed: true
+  assembly: true
+  annotation: false
+  phylogeny: false
+  reporting: false
+
+tools:
+  fastp:
+    threads: 4
+    detect_adapter_for_pe: true
+    length_required: 50
+    qualified_quality_phred: 20
+    cut_front: false
+    cut_tail: false
+    cut_right: false
+    disable_quality_filtering: false
+    disable_length_filtering: false
+    trim_poly_g: false
+    disable_trim_poly_g: false
+    trim_poly_x: false
+
+  getorganelle:
+    threads: 4
+    organelle_type: animal_mt
+    database_type: animal_mt
+    initialize_database: true
+    overwrite: true
+    max_reads: 50000

@@ -2,6 +2,10 @@
 
 Contains rules for quality control execution.
 """
+
+# Imports
+from pathlib import Path
+
 rule qc_trimmed:
     """Run FastQC on raw sequencing reads.
     
@@ -30,7 +34,7 @@ rule qc_trimmed:
     # Define params.
     params:
         output_dir = str(JOB_DIR / "qc" / "trimmed"),
-        working_dir = workflow.basedir,
+        working_dir = str(Path.cwd()),
         log_file = str(JOB_DIR / "logs" / "fastqc.trimmed" / "{sample}.log")
     # Define conda environment.
     conda: 

@@ -3,6 +3,9 @@
 Contains rules for read trimming and filtering execution.
 """
 
+# Imports
+from pathlib import Path
+
 def fastp_optional_args(config):
     """Build optional fastp CLI arguments from config.
     
@@ -80,11 +83,11 @@ rule trimming:
 
     # Defining params.
     params:
-        output_dir=str(JOB_DIR / "trimming"),
-        working_dir=workflow.basedir,
-        log_file=str(JOB_DIR / "logs" / "trimming" / "{sample}.log"),
-        threads=config["tools"]["fastp"]["threads"],
-        optional_args=fastp_optional_args(config),
+        output_dir = str(JOB_DIR / "trimming"),
+        working_dir = str(Path.cwd()),
+        log_file = str(JOB_DIR / "logs" / "trimming" / "{sample}.log"),
+        threads = config["tools"]["fastp"]["threads"],
+        optional_args = fastp_optional_args(config),
 
     # Specifying the conda environment.
     conda:

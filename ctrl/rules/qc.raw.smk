@@ -2,6 +2,10 @@
 
 Contains rules for quality control execution.
 """
+
+# Imports
+from pathlib import Path
+
 rule qc_raw:
     """Run FastQC on raw sequencing reads.
     
@@ -30,7 +34,7 @@ rule qc_raw:
     # Define params.
     params:
         output_dir = str(JOB_DIR / "qc" / "raw"),
-        working_dir = workflow.basedir,
+        working_dir = str(Path.cwd()),
         log_file = str(JOB_DIR / "logs" / "fastqc.raw" / "{sample}.log"),
     # Define conda environment.
     conda: 

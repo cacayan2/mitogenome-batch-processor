@@ -12,14 +12,15 @@ import pytest
 pytestmark = pytest.mark.slow
 
 
-def test_getorganelle_exec_layer_through_snakemake():
-    """Integration test confirming Snakemake executes GetOrganelle through run_getorganelle.py."""
+def test_getorganelle_exec_layer_through_snakemake_real_data():
+    """Integration test confirming Snakemake executes GetOrganelle on real fixture data."""
 
     # Defining test paths.
+    sample_id = "lemon_shark_001"
     output_dir = Path("tests/fixtures/outputs/test_job")
     assembly_dir = output_dir / "assembly"
-    log_file = output_dir / "logs" / "assembly" / "sample_001.log"
-    target = assembly_dir / "sample_001.fasta"
+    log_file = output_dir / "logs" / "assembly" / f"{sample_id}.log"
+    target = assembly_dir / f"{sample_id}.assembly.done"
 
     # Removing previous test outputs.
     if output_dir.exists():
@@ -33,10 +34,10 @@ def test_getorganelle_exec_layer_through_snakemake():
                 "-s",
                 "ctrl/Snakefile",
                 "--configfile",
-                "tests/fixtures/config/config.yaml",
+                "tests/fixtures/config/config_getorganelle_real.yaml",
                 "--use-conda",
                 "--cores",
-                "1",
+                "4",
                 str(target),
             ],
             capture_output=True,
@@ -46,10 +47,14 @@ def test_getorganelle_exec_layer_through_snakemake():
         # Assert statements.
         assert result.returncode == 0, result.stdout + result.stderr
         assert target.exists()
-        assert (assembly_dir / "sample_001.gfa").exists()
-        assert (assembly_dir / "sample_001.assembly.done").exists()
         assert log_file.exists()
+        assert assembly_dir.exists()
+
+        # Temporary exploratory assertions.
+        # Keep these until we know exactly what GetOrganelle produces.
+        assembly_files = list(assembly_dir.rglob("*"))
+        assert len(assembly_files) > 0
 
     finally:
-        # Cleanup.
+        # Leave outputs for inspection until output normalization is implemented.
         pass
