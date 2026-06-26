@@ -33,8 +33,9 @@ def test_fastqc__runner_inherits_from_basetool():
     runner = FastQCRunner(
         sample=sample,
         output_dir=output_dir,
+        threads = 8,
         working_dir=Path("."),
-        logger=None
+        logger=None,
     )
 
     # Assert statements.
@@ -75,6 +76,8 @@ def test_fastqc_runner_builds_expected_command():
     # Assert statements.
     assert command == [
         "fastqc",
+        "--threads",
+        "4",
         str(sample.r1),
         str(sample.r2),
         "-o",

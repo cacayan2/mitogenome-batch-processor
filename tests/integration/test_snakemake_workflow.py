@@ -53,7 +53,6 @@ def test_snakemake_dry_run():
         if output_dir.exists():
             shutil.rmtree(output_dir)
 
-
 def test_snakemake_placeholder_workflow_execution():
     """Integration test confirming placeholder Snakemake workflow executes."""
 
@@ -88,4 +87,4 @@ def test_snakemake_placeholder_workflow_execution():
     finally:
         # Cleanup.
         if output_dir.exists():
-            pass
+            pass                
