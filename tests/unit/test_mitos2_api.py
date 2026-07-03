@@ -188,7 +188,13 @@ def test_mitos2_runner_build_command_circular_default(tmp_path):
     command = runner.build_command()
 
     # Checking command.
-    assert command[0] == "runmitos.py"
+    assert command[:4] == [
+        "conda",
+        "run",
+        "-n",
+        "mito-annotation",
+    ]
+    assert command[4] == "runmitos.py"
     assert "-i" in command
     assert str(runner.input_fasta) in command
     assert "--code" in command

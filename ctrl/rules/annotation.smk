@@ -13,7 +13,7 @@ rule annotation:
     input:
         fasta=str(JOB_DIR / "assembly" / "{sample}.fasta"),
         assembly_done=str(JOB_DIR / "assembly" / "{sample}.assembly.done"),
-        mitos2_reference_done=str(JOB_DIR / "setup" / "mitos2" / "mitos2_reference_data.done")
+        mitos2_done=str(JOB_DIR / "setup" / "mitos2" / "mitos2.done")
 
     output:
         done=str(JOB_DIR / "annotation" / "{sample}.annotation.done")

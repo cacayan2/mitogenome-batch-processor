@@ -160,6 +160,9 @@ class MITOS2Runner(BaseTool):
         if self.ncbicode:
             command.append("--ncbicode")
 
+        if self.zip_output:
+            command.append("--zip")
+
         # Returning command.
         return command
 

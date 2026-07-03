@@ -15,6 +15,7 @@ stages:
 tools:
   mitos2:
     conda_env: mito-annotation
+    env_file: envs/annotation.yaml
     genetic_code: 2
     refdir: resources/mitos
     refseqver: refseq89m
