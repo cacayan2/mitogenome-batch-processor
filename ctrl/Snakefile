@@ -85,8 +85,9 @@ if stage_enabled("assembly"):
     include: "rules/assembly.smk"
 
 if stage_enabled("annotation"):
+    include: "rules/mitos2_config.smk"
     include: "rules/annotation.smk"
-
+    
 if stage_enabled("phylogeny"):
     include: "rules/phylogeny.smk"
 

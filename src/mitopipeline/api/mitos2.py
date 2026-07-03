@@ -6,6 +6,7 @@ API wrapper for running MITOS2 mitochondrial genome annotation.
 # Imports
 from pathlib import Path
 from logging import Logger
+from shutil import which
 
 from mitopipeline.api.base_tool import BaseTool
 
@@ -27,6 +28,7 @@ class MITOS2Runner(BaseTool):
         best: bool = False,
         ncbicode: bool = False,
         logger: Logger | None = None,
+        conda_env: str = "mito-annotation",
     ):
         """Initialize MITOS2Runner.
 
@@ -51,6 +53,7 @@ class MITOS2Runner(BaseTool):
             working_dir=working_dir,
             logger=logger,
         )
+        self.conda_env = conda_env
 
         # Storing paths.
         self.input_fasta = Path(input_fasta)
@@ -127,6 +130,10 @@ class MITOS2Runner(BaseTool):
 
         # Creating base command.
         command = [
+            "conda",
+            "run",
+            "-n",
+            self.conda_env,
             "runmitos.py",
             "-i",
             str(self.input_fasta),
@@ -139,17 +146,13 @@ class MITOS2Runner(BaseTool):
             "--refseqver",
             str(self.refseqver),
         ]
-
-        # MITOS2 defaults to circular unless --linear is passed.
+        
+        # Adding optional flags.
         if not self.circular:
             command.append("--linear")
 
-        # Adding optional flags.
         if self.noplots:
             command.append("--noplots")
-
-        if self.zip_output:
-            command.append("--zip")
 
         if self.best:
             command.append("--best")
@@ -176,7 +179,6 @@ class MITOS2Runner(BaseTool):
             self.output_dir / "result.gff",
             self.output_dir / "result.mitos",
             self.output_dir / "result.seq",
-            self.output_dir / "stst.dat",
         ]
 
         # Checking required files exist and are non-empty.
@@ -189,9 +191,16 @@ class MITOS2Runner(BaseTool):
                 if self.logger is not None: self.logger.error(f"({self.tool_name}) Expected output is not a file: {required_file}")
                 raise ValueError(f"({self.tool_name}) Expected output is not a file: {required_file}")
 
-            if required_file.stat().st_size == 0:
-                if self.logger is not None: self.logger.error(f"({self.tool_name}) Expected output file is empty: {required_file}")
-                raise ValueError(f"({self.tool_name}) Expected output file is empty: {required_file}")
+        # Optional check for stst.dat.
+        status_file = self.output_dir / "stst.dat"
+
+        if not status_file.exists():
+            if self.logger is not None: self.logger.error(f"({self.tool_name}) Expected status file does not exist: {status_file}")
+            raise FileNotFoundError(f"({self.tool_name}) Expected status file does not exist: {status_file}")
+
+        if not status_file.is_file():
+            if self.logger is not None: self.logger.error(f"({self.tool_name}) Expected status path is not a file: {status_file}")
+            raise ValueError(f"({self.tool_name}) Expected status path is not a file: {status_file}")
 
         # Checking required intermediate directories exist.
         required_directories = [

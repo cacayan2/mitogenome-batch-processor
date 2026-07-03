@@ -37,3 +37,12 @@ tools:
     initialize_database: true
     overwrite: true
     max_reads: null
+  mitos2:
+    genetic_code: 2
+    refdir: resources/mitos
+    refseqver: refseq89m
+    zenodo_record: "4284483"
+    circular: true
+    noplots: false
+    best: false
+    ncbicode: false
