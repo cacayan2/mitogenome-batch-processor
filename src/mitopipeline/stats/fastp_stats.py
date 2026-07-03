@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Union
 import json
 import logging
+from mitopipeline.models.fastp_stats import FastPStats
 
 def parse_fastp_json(
         json_path: Path, 
@@ -35,31 +36,34 @@ def parse_fastp_json(
         if logger is not None: logger.info(f"Fastp json file loaded: {json_path}")
     
     # Extracting stats.
-    stats = {
-        "sample_id": sample_id,
-        "reads_in": data["summary"]["before_filtering"]["total_reads"],
-        "reads_out": data["summary"]["after_filtering"]["total_reads"],
-        "bases_in": data["summary"]["before_filtering"]["total_bases"],
-        "bases_out": data["summary"]["after_filtering"]["total_bases"],
-        "q20_rate_in": data["summary"]["before_filtering"]["q20_rate"],
-        "q20_rate_out": data["summary"]["after_filtering"]["q20_rate"],
-        "q30_rate_in": data["summary"]["before_filtering"]["q30_rate"],
-        "q30_rate_out": data["summary"]["after_filtering"]["q30_rate"],
-        "gc_content_in": data["summary"]["before_filtering"]["gc_content"],
-        "gc_content_out": data["summary"]["after_filtering"]["gc_content"],
-        "reads_removed": data["summary"]["before_filtering"]["total_reads"] - data["summary"]["after_filtering"]["total_reads"],
-        "bases_removed": data["summary"]["before_filtering"]["total_bases"] - data["summary"]["after_filtering"]["total_bases"],
-        "read_retention_rate": data["summary"]["after_filtering"]["total_reads"] / data["summary"]["before_filtering"]["total_reads"],
-        "base_retention_rate": data["summary"]["after_filtering"]["total_bases"] / data["summary"]["before_filtering"]["total_bases"],
-        "reads_passing_filtering": data["filtering_result"]["passed_filter_reads"],
-        "low_qual_removed": data["filtering_result"]["low_quality_reads"],
-        "too_many_n_removed": data["filtering_result"]["too_many_N_reads"],
-        "too_short_removed": data["filtering_result"]["too_short_reads"],
-        "too_long_removed": data["filtering_result"]["too_long_reads"],
-        "too_long_removed": data["filtering_result"]["too_long_reads"],
-        "adapter_removed_reads": data["adapter_cutting"]["adapter_trimmed_reads"],
-        "adapter_removed_bases": data["adapter_cutting"]["adapter_trimmed_bases"],
-    }
+    stats = FastPStats(
+        sample_id=sample_id,
+        reads_in=data["summary"]["before_filtering"]["total_reads"],
+        reads_out=data["summary"]["after_filtering"]["total_reads"],
+        bases_in=data["summary"]["before_filtering"]["total_bases"],
+        bases_out=data["summary"]["after_filtering"]["total_bases"],
+        q20_rate_in=data["summary"]["before_filtering"]["q20_rate"],
+        q20_rate_out=data["summary"]["after_filtering"]["q20_rate"],
+        q30_rate_in=data["summary"]["before_filtering"]["q30_rate"],
+        q30_rate_out=data["summary"]["after_filtering"]["q30_rate"],
+        gc_content_in=data["summary"]["before_filtering"]["gc_content"],
+        gc_content_out=data["summary"]["after_filtering"]["gc_content"],
+        reads_removed=data["summary"]["before_filtering"]["total_reads"]
+        - data["summary"]["after_filtering"]["total_reads"],
+        bases_removed=data["summary"]["before_filtering"]["total_bases"]
+        - data["summary"]["after_filtering"]["total_bases"],
+        read_retention_rate=data["summary"]["after_filtering"]["total_reads"]
+        / data["summary"]["before_filtering"]["total_reads"],
+        base_retention_rate=data["summary"]["after_filtering"]["total_bases"]
+        / data["summary"]["before_filtering"]["total_bases"],
+        reads_passing_filtering=data["filtering_result"]["passed_filter_reads"],
+        low_qual_removed=data["filtering_result"]["low_quality_reads"],
+        too_many_n_removed=data["filtering_result"]["too_many_N_reads"],
+        too_short_removed=data["filtering_result"]["too_short_reads"],
+        too_long_removed=data["filtering_result"]["too_long_reads"],
+        adapter_removed_reads=data["adapter_cutting"]["adapter_trimmed_reads"],
+        adapter_removed_bases=data["adapter_cutting"]["adapter_trimmed_bases"],
+    )
 
     # Returning stats. 
     if logger is not None: logger.info(f"Fastp stats extracted: {json_path}")

@@ -9,14 +9,15 @@ from pathlib import Path
 from typing import Union
 import zipfile
 import pandas as pd
+from mitopipeline.models.fastqc_stats import FastQCStats
 
 def parse_fastqc_summary(
                         zip_path: Path, 
                         sample_id: str, 
                         qc_stage: str, 
                         logger: logging.Logger | None = None
-                        ) -> dict[str, Union[str, float, dict]]:
-    """Parses the fastqc summary file and returns a dictionary of stats for the sample.
+                        ) -> FastQCStats:
+    """Parses the fastqc summary file and returns a FastQCStats object for the sample.
 
     Args:
         zip_path (Path): The path to the fastqc zip file.
@@ -25,7 +26,7 @@ def parse_fastqc_summary(
         logger (logging.Logger | None, optional): The logger to use. Defaults to None.
 
     Returns:
-        dict[str, Union[str, float]]: A dictionary of stats for the sample.
+        FastQCStats: A FastQCStats object for the sample.
     """
     # Checking if the zip file exists.
     zip_path = Path(zip_path)
@@ -56,18 +57,19 @@ def parse_fastqc_summary(
     # Obtaining source file.
     source_file = str(df.iloc[0, 2]).strip()
 
-    # Encoding statuses into dictionary.
-    stats = {
-        "sample_id": sample_id,
-        "qc_stage": qc_stage,
-        "source_file": source_file,
-        "overall_status": calculate_overall_fastqc_status(module_statuses),
-        "module_statuses": module_statuses
-    }
+    # Creating FastQCStats object.
+    stats = FastQCStats(
+        sample_id = sample_id,
+        qc_stage = qc_stage,
+        source_file = source_file,
+        overall_status = calculate_overall_fastqc_status(module_statuses),
+        module_statuses = module_statuses,
+    )
 
     # Logging and returning.
     if logger is not None: logger.info(f"FastQC summary file parsed successfully: {zip_path}.")
     return stats
+    
 
 def calculate_overall_fastqc_status(module_statuses: dict[str, str]) -> str:
     """Calculate overall FastQC status from module statuses.

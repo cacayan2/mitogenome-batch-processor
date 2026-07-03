@@ -462,3 +462,19 @@ def test_parse_annotation_stats_does_not_count_unknown_gene_as_cds(tmp_path):
     assert stats.cds_count == 0
     assert stats.gene_count == 1
     assert stats.feature_count == 1
+
+def test_annotation_stats_to_dict_joins_warnings():
+    stats = AnnotationStats(
+        sample_id="sample_001",
+        cds_count=13,
+        trna_count=22,
+        rrna_count=2,
+        gene_count=37,
+        feature_count=99,
+        warnings=["duplicated:2x rrnL", "warning: low confidence"],
+    )
+
+    data = stats.to_dict()
+
+    assert data["warnings"] == "duplicated:2x rrnL; warning: low confidence"
+    assert data["cds_count"] == 13

@@ -14,6 +14,8 @@ from mitopipeline.stats.assembly_stats import (
     parse_assembly_stats,
 )
 
+from mitopipeline.models.assembly_stats import AssemblyStats
+
 def create_fasta_file(fasta_path: Path, fasta_text: str) -> None:
     """Create a minimal FASTA fixture."""
 
@@ -208,3 +210,19 @@ def test_parse_assembly_stats_empty_fasta_raises_error(tmp_path):
             runtime_seconds=None,
             logger=None,
         )
+
+def test_assembly_stats_to_dict_converts_fasta_path():
+    stats = AssemblyStats(
+        sample_id="sample_001",
+        fasta_path=Path("outputs/sample_001.fasta"),
+        contig_count=1,
+        total_length_bp=16581,
+        gc_content_percent=43.2,
+        circularization_status="complete",
+        runtime_seconds=10.5,
+    )
+
+    data = stats.to_dict()
+
+    assert data["fasta_path"] == "outputs/sample_001.fasta"
+    assert data["total_length_bp"] == 16581
