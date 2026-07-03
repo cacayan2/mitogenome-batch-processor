@@ -14,7 +14,6 @@ from mitopipeline.stats.assembly_stats import (
     parse_assembly_stats,
 )
 
-
 def create_fasta_file(fasta_path: Path, fasta_text: str) -> None:
     """Create a minimal FASTA fixture."""
 
