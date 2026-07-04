@@ -1,56 +1,73 @@
 """blast_config.smk
 
-Contains rules for setting up the local BLAST reference database.
+Set up a local BLAST database using fixed switchboard configuration.
 """
 
 # Imports
 from pathlib import Path
 
-def blast_database_optional_args(config):
-    """Build optional arguments for BLAST database setup.
-    
-    Args:
-        config (dict): Configuration dictionary.
-    
-    Returns:
-        str: String of optional arguments.
-    """
-    # Extracting BLAST options from config.
-    blast_config = config["tools"]["blast"]
+from mitopipeline.config.blast_config import BlastConfig
+
+
+BLAST_CONFIG = BlastConfig.from_mapping(
+    config["tools"]["blast"]
+)
+
+
+def blast_setup_optional_args():
+    """Build optional database setup arguments."""
     args = []
 
-    # Adding optional arguments.
-    if blast_config.get("parse_seqids", False):
+    if BLAST_CONFIG.parse_seqids:
         args.append("--parse-seqids")
 
-    if blast_config.get("overwrite_database", False):
+    if BLAST_CONFIG.overwrite_database:
         args.append("--overwrite")
 
-    # Returning string of optional arguments.
     return " ".join(args)
 
-rule setup_blast_database:
-    """Build and validate the local nucleotide BLAST database."""
 
-    # Required arguments.
-    input:
-        reference_fasta=lambda wildcards: str(
-            Path(config["tools"]["blast"]["reference_fasta"]).resolve()
+def blast_reference_input():
+    """Return reference FASTA dependency for custom FASTA mode."""
+    if BLAST_CONFIG.uses_reference_fasta:
+        return str(
+            BLAST_CONFIG.reference_fasta.resolve()
         )
 
-    # Optional arguments.
-    output:
-        done=str(JOB_DIR / "setup" / "blast" / "blast_database.done")
+    return []
 
+
+rule setup_blast_database:
+    """Build or download the selected local BLAST database.
+    
+    Input:
+        reference: Path to reference FASTA file.
+    
+    Output:
+        done: Path to BLAST database setup done file.
+    """
+    # Inputs
+    input:
+        reference=blast_reference_input()
+    # Outputs
+    output:
+        done=str(
+            JOB_DIR
+            / "setup"
+            / "blast"
+            / "blast_database.done"
+        )
     # Specifying params.
     params:
-        database_prefix=str(
-            Path(config["tools"]["blast"]["database"]).resolve()
+        database_source=BLAST_CONFIG.database_source,
+        database_name=BLAST_CONFIG.database_name,
+        database_dir=str(
+            BLAST_CONFIG.database_dir.resolve()
         ),
-        database_title=config["tools"]["blast"].get(
-            "database_title",
-            "mitopipeline mitochondrial reference database",
+        reference_fasta=str(
+            BLAST_CONFIG.reference_fasta.resolve()
         ),
+        database_title=BLAST_CONFIG.database_title,
         metadata_file=str(
             (
                 Path.cwd()
@@ -69,20 +86,20 @@ rule setup_blast_database:
                 / "blast_database.log"
             ).resolve()
         ),
-        optional_args=blast_database_optional_args(config),
-
+        optional_args=blast_setup_optional_args()
     # Specifying conda environment.
     conda:
         "../../envs/blast.yaml"
-
     # Shell script for running BLAST database setup.
     shell:
         """
         python -m pip install -e . --quiet
 
         python -m mitopipeline.utils.setup_blast_database \
-            --input-fasta {input.reference_fasta} \
-            --database-prefix {params.database_prefix} \
+            --database-source {params.database_source} \
+            --database-name {params.database_name} \
+            --database-dir {params.database_dir} \
+            --reference-fasta {params.reference_fasta} \
             --database-title "{params.database_title}" \
             --metadata-file {params.metadata_file} \
             --done-file {output.done} \

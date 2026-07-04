@@ -14,20 +14,24 @@ stages:
 
 tools:
   blast:
-    initialize_database: true
+    mode: local
+    database_source: fasta
 
+    database_name: test_mito
+    database_dir: tests/fixtures/blast/database
     reference_fasta: tests/fixtures/blast/reference_mitogenomes.fasta
-    database: tests/fixtures/blast/database/test_mito
-    database_title: MitoPipeline BLAST integration test database
+    database_title: MitoPipeline BLAST integration database
 
-    parse_seqids: false
-    overwrite_database: false
+    initialize_database: true
+    overwrite_database: true
+    parse_seqids: true
 
     threads: 4
     task: blastn
     evalue: 1.0e-5
-    max_target_seqs: 10
+    max_target_seqs: 50
     max_hsps: 1
+    maximum_matches: 6
 
     perc_identity: null
     query_coverage: null

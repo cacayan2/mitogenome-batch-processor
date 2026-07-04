@@ -1,17 +1,28 @@
 """blast.smk
 
-Contains rules for validating mitochondrial genome assemblies with BLAST.
+Run local or remote BLAST validation.
 """
 
 # Imports
 from pathlib import Path
 
-def blast_database_input(config):
-    """Return BLAST database setup dependency when enabled."""
+from mitopipeline.config.blast_config import BlastConfig
 
-    blast_config = config["tools"]["blast"]
 
-    if blast_config.get("initialize_database", True):
+BLAST_CONFIG = BlastConfig.from_mapping(
+    config["tools"]["blast"]
+)
+
+def blast_max_hsps_arg():
+    """Return max-HSP argument when configured."""
+    if BLAST_CONFIG.max_hsps is None:
+        return ""
+
+    return f"--max-hsps {BLAST_CONFIG.max_hsps}"
+
+def blast_database_dependency():
+    """Return database setup dependency when required."""
+    if BLAST_CONFIG.requires_database_setup:
         return str(
             JOB_DIR
             / "setup"
@@ -21,40 +32,39 @@ def blast_database_input(config):
 
     return []
 
-def blast_optional_args(config):
-    """Build optional BLAST command-line arguments.
 
-    Args:
-        config (dict): Pipeline configuration.
-
-    Returns:
-        str: Optional BLAST arguments.
-    """
-    # Extracting BLAST options from config.
-    blast_config = config["tools"]["blast"]
+def blast_optional_args():
+    """Build optional blastn arguments."""
     args = []
 
-    # Creating dictionary of optional BLAST arguments.
     value_options = {
-        "perc_identity": "--perc-identity",
-        "query_coverage": "--query-coverage",
-        "word_size": "--word-size",
+        BLAST_CONFIG.perc_identity: "--perc-identity",
+        BLAST_CONFIG.query_coverage: "--query-coverage",
+        BLAST_CONFIG.word_size: "--word-size",
     }
 
-    # Adding optional BLAST arguments.
-    for option_name, flag in value_options.items():
-        value = blast_config.get(option_name)
-
+    for value, flag in value_options.items():
         if value is not None:
-            args.append(f"{flag} {value}")
+            args.append(
+                f"{flag} {value}"
+            )
 
-    # Returning string of optional BLAST arguments.
     return " ".join(args)
 
 
 rule blast_validation:
-    """Run local BLAST validation on an assembled mitochondrial genome."""
-    # Required arguments.
+    """Run selected local or remote BLAST mode.
+    
+    Inputs:
+        - query_fasta: Assembly FASTA file.
+        - assembly_done: Assembly validation done file.
+        - database_done: BLAST database setup done file.
+
+    Outputs:
+        - results: BLAST results file.
+        - done: BLAST validation done file.
+    """
+    # Inputs
     input:
         query_fasta=str(
             JOB_DIR
@@ -66,8 +76,8 @@ rule blast_validation:
             / "assembly"
             / "{sample}.assembly.done"
         ),
-        database_done=blast_database_input(config)
-    # Output arguments.
+        database_done=blast_database_dependency()
+    # Outputs
     output:
         results=str(
             JOB_DIR
@@ -81,8 +91,10 @@ rule blast_validation:
             / "blast"
             / "{sample}.blast.done"
         )
-    # Parameter arguments.
+    # Parameters
     params:
+        mode=BLAST_CONFIG.mode,
+        database=BLAST_CONFIG.database_argument,
         output_dir=str(
             (
                 Path.cwd()
@@ -92,9 +104,6 @@ rule blast_validation:
             ).resolve()
         ),
         working_dir=str(Path.cwd()),
-        database=str(
-            Path(config["tools"]["blast"]["database"]).resolve()
-        ),
         log_file=str(
             (
                 Path.cwd()
@@ -104,38 +113,19 @@ rule blast_validation:
                 / "{sample}.log"
             ).resolve()
         ),
-        task=config["tools"]["blast"].get(
-            "task",
-            "blastn",
-        ),
-        output_format=config["tools"]["blast"].get(
-            "output_format",
-            (
-                "6 qseqid sseqid pident length mismatch gapopen "
-                "qstart qend sstart send evalue bitscore qcovs "
-                "staxids sscinames stitle"
-            ),
-        ),
-        evalue=config["tools"]["blast"].get(
-            "evalue",
-            1e-5,
-        ),
-        max_target_seqs=config["tools"]["blast"].get(
-            "max_target_seqs",
-            10,
-        ),
-        max_hsps=config["tools"]["blast"].get(
-            "max_hsps",
-            1,
-        ),
-        optional_args=blast_optional_args(config)
-    # Config arguments.
+        task=BLAST_CONFIG.task,
+        output_format=BLAST_CONFIG.output_format,
+        evalue=BLAST_CONFIG.evalue,
+        max_target_seqs=BLAST_CONFIG.max_target_seqs,
+        max_hsps_arg=blast_max_hsps_arg(),
+        optional_args=blast_optional_args()
+    # Thread specification.
     threads:
-        config["tools"]["blast"].get("threads", 4)
-    # Snakemake arguments.
+        BLAST_CONFIG.threads
+    # Environment
     conda:
         "../../envs/blast.yaml"
-    # Snakemake commands.
+    # Run BLAST
     shell:
         """
         python -m pip install -e . --quiet
@@ -144,6 +134,7 @@ rule blast_validation:
             --sample-id {wildcards.sample} \
             --query-fasta {input.query_fasta} \
             --database {params.database} \
+            --mode {params.mode} \
             --output-dir {params.output_dir} \
             --working-dir {params.working_dir} \
             --threads {threads} \
@@ -152,7 +143,7 @@ rule blast_validation:
             --output-format "{params.output_format}" \
             --evalue {params.evalue} \
             --max-target-seqs {params.max_target_seqs} \
-            --max-hsps {params.max_hsps} \
+            {params.max_hsps_arg} \
             {params.optional_args}
 
         touch {output.done}

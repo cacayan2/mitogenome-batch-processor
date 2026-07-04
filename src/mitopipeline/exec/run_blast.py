@@ -13,56 +13,20 @@ from mitopipeline.logging.logger_factory import make_logger
 
 
 def parse_args() -> argparse.Namespace:
-    """Parse command-line arguments.
-
-    Returns:
-        argparse.Namespace: Parsed command-line arguments.
-    """
+    """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description=(
-            "Run local nucleotide BLAST on one assembled mitochondrial genome."
-        )
+        description="Run local or remote nucleotide BLAST."
     )
 
-    # Required arguments.
-    parser.add_argument(
-        "--sample-id",
-        required=True,
-        help="Unique sample identifier.",
-    )
-    parser.add_argument(
-        "--query-fasta",
-        required=True,
-        help="Path to assembled mitochondrial genome FASTA.",
-    )
-    parser.add_argument(
-        "--database",
-        required=True,
-        help="Prefix of the local nucleotide BLAST database.",
-    )
-    parser.add_argument(
-        "--output-dir",
-        required=True,
-        help="Directory for BLAST output.",
-    )
-    parser.add_argument(
-        "--working-dir",
-        required=True,
-        help="Working directory for BLAST execution.",
-    )
-    parser.add_argument(
-        "--threads",
-        required=True,
-        type=int,
-        help="Number of CPU threads.",
-    )
-    parser.add_argument(
-        "--log-file",
-        required=True,
-        help="Path to BLAST log file.",
-    )
+    parser.add_argument("--sample-id", required=True)
+    parser.add_argument("--query-fasta", required=True)
+    parser.add_argument("--database", required=True)
+    parser.add_argument("--mode", required=True, choices=["local", "remote"])
+    parser.add_argument("--output-dir", required=True)
+    parser.add_argument("--working-dir", required=True)
+    parser.add_argument("--threads", required=True, type=int)
+    parser.add_argument("--log-file", required=True)
 
-    # Optional BLAST arguments.
     parser.add_argument(
         "--task",
         default="blastn",
@@ -72,62 +36,49 @@ def parse_args() -> argparse.Namespace:
             "dc-megablast",
             "blastn-short",
         ],
-        help="BLAST nucleotide search task.",
     )
     parser.add_argument(
         "--output-format",
         default=DEFAULT_OUTFMT,
-        help="BLAST output format string.",
     )
     parser.add_argument(
         "--evalue",
         type=float,
         default=1e-5,
-        help="Maximum expected value.",
     )
     parser.add_argument(
         "--max-target-seqs",
         type=int,
-        default=10,
-        help="Maximum number of target sequences retained.",
+        default=50,
     )
     parser.add_argument(
         "--max-hsps",
         type=int,
         default=1,
-        help="Maximum number of HSPs per query-subject pair.",
     )
     parser.add_argument(
         "--perc-identity",
         type=float,
         default=None,
-        help="Minimum percent identity.",
     )
     parser.add_argument(
         "--query-coverage",
         type=float,
         default=None,
-        help="Minimum HSP query coverage percentage.",
     )
     parser.add_argument(
         "--word-size",
         type=int,
         default=None,
-        help="BLAST word size.",
     )
 
     return parser.parse_args()
 
 
-def build_logger(args: argparse.Namespace) -> Logger:
-    """Construct BLAST logger.
-
-    Args:
-        args (argparse.Namespace): Parsed command-line arguments.
-
-    Returns:
-        Logger: Configured logger.
-    """
+def build_logger(
+    args: argparse.Namespace,
+) -> Logger:
+    """Construct BLAST logger."""
     return make_logger(
         name="blast",
         log_file_path=args.log_file,
@@ -135,27 +86,20 @@ def build_logger(args: argparse.Namespace) -> Logger:
 
 
 def main() -> int:
-    """Run BLAST for one mitochondrial genome.
-
-    Returns:
-        int: Process exit code.
-    """
+    """Run BLAST for one sample."""
     logger = None
 
     try:
         args = parse_args()
         logger = build_logger(args)
 
-        logger.info(
-            f"Starting BLAST execution for sample {args.sample_id}."
-        )
-
         runner = BlastRunner(
             query_fasta=Path(args.query_fasta),
-            database=Path(args.database),
+            database=args.database,
             output_dir=Path(args.output_dir),
             working_dir=Path(args.working_dir),
             sample_id=args.sample_id,
+            mode=args.mode,
             threads=args.threads,
             task=args.task,
             output_format=args.output_format,
@@ -172,25 +116,17 @@ def main() -> int:
 
         if not result.success:
             logger.error(
-                f"BLAST execution failed for sample {args.sample_id}."
-            )
-            logger.debug(
-                f"BLAST return code: {result.return_code}"
-            )
-            logger.debug(
-                f"BLAST stdout: {result.stdout}"
-            )
-            logger.debug(
-                f"BLAST stderr: {result.stderr}"
+                f"BLAST failed for sample {args.sample_id}."
             )
 
-            return result.return_code if result.return_code != 0 else 1
+            return (
+                result.return_code
+                if result.return_code != 0
+                else 1
+            )
 
         logger.info(
-            f"BLAST execution completed for sample {args.sample_id}."
-        )
-        logger.debug(
-            f"BLAST runtime seconds: {result.runtime_seconds}"
+            f"BLAST completed for sample {args.sample_id}."
         )
 
         return 0

@@ -1,6 +1,6 @@
 """setup_blast_database.py
 
-Build and validate a local nucleotide BLAST database.
+Build, download, update, and validate a local nucleotide BLAST database.
 """
 
 # Imports
@@ -15,76 +15,52 @@ from pathlib import Path
 from mitopipeline.logging.logger_factory import make_logger
 
 
-# Constants
-NUCLEOTIDE_DATABASE_EXTENSIONS = [
-    ".nhr",
-    ".nin",
-    ".nsq",
-]
-
-OPTIONAL_DATABASE_EXTENSIONS = [
-    ".ndb",
-    ".not",
-    ".ntf",
-    ".nto",
-]
-
-
 def parse_args() -> argparse.Namespace:
-    """Parse command-line arguments.
-
-    Returns:
-        argparse.Namespace: Parsed command-line arguments.
-    """
+    """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="Build and validate a local nucleotide BLAST database."
+        description="Set up a local nucleotide BLAST database."
     )
 
     parser.add_argument(
-        "--input-fasta",
+        "--database-source",
         required=True,
-        help="Reference nucleotide FASTA used to build the database.",
+        choices=["ncbi", "fasta"],
     )
     parser.add_argument(
-        "--database-prefix",
+        "--database-name",
         required=True,
-        help=(
-            "Output BLAST database prefix, for example "
-            "/data/blast/fish_mito."
-        ),
+    )
+    parser.add_argument(
+        "--database-dir",
+        required=True,
+    )
+    parser.add_argument(
+        "--reference-fasta",
+        required=True,
     )
     parser.add_argument(
         "--database-title",
-        default="mitopipeline mitochondrial reference database",
-        help="Human-readable BLAST database title.",
+        required=True,
     )
     parser.add_argument(
         "--done-file",
         required=True,
-        help="Path to the Snakemake setup completion marker.",
+    )
+    parser.add_argument(
+        "--metadata-file",
+        required=True,
     )
     parser.add_argument(
         "--log-file",
         required=True,
-        help="Path to the setup log file.",
-    )
-    parser.add_argument(
-        "--metadata-file",
-        default=None,
-        help=(
-            "Optional database metadata JSON path. Defaults to "
-            "<database-prefix>.metadata.json."
-        ),
     )
     parser.add_argument(
         "--parse-seqids",
         action="store_true",
-        help="Pass -parse_seqids to makeblastdb.",
     )
     parser.add_argument(
         "--overwrite",
         action="store_true",
-        help="Replace an existing or incomplete BLAST database.",
     )
 
     return parser.parse_args()
@@ -93,20 +69,15 @@ def parse_args() -> argparse.Namespace:
 def run_command(
     command: list[str],
     logger,
+    cwd: Path | None = None,
 ) -> subprocess.CompletedProcess:
-    """Run a command and capture its output.
-
-    Args:
-        command (list[str]): Command to execute.
-        logger: Configured logger.
-
-    Returns:
-        subprocess.CompletedProcess: Completed process.
-    """
+    """Run a command and capture output."""
     logger.debug(f"Command: {command}")
+    logger.debug(f"Working directory: {cwd}")
 
     result = subprocess.run(
         command,
+        cwd=cwd,
         capture_output=True,
         text=True,
     )
@@ -118,57 +89,19 @@ def run_command(
     return result
 
 
-def required_database_files(database_prefix: Path) -> list[Path]:
-    """Return required nucleotide BLAST database files.
-
-    Args:
-        database_prefix (Path): BLAST database prefix.
-
-    Returns:
-        list[Path]: Required component paths.
-    """
-    prefix = str(database_prefix)
-
-    return [
-        Path(f"{prefix}{extension}")
-        for extension in NUCLEOTIDE_DATABASE_EXTENSIONS
-    ]
-
-
-def database_files(database_prefix: Path) -> list[Path]:
-    """Return all detected files belonging to a database prefix.
-
-    Args:
-        database_prefix (Path): BLAST database prefix.
-
-    Returns:
-        list[Path]: Matching database files.
-    """
-    parent = database_prefix.parent
-    prefix_name = database_prefix.name
-
-    if not parent.exists():
+def database_files(
+    database_prefix: Path,
+) -> list[Path]:
+    """Return all files associated with a database prefix."""
+    if not database_prefix.parent.exists():
         return []
 
     return sorted(
         path
-        for path in parent.glob(f"{prefix_name}.*")
+        for path in database_prefix.parent.glob(
+            f"{database_prefix.name}*"
+        )
         if path.is_file()
-    )
-
-
-def database_components_exist(database_prefix: Path) -> bool:
-    """Return whether all required database files exist.
-
-    Args:
-        database_prefix (Path): BLAST database prefix.
-
-    Returns:
-        bool: True when required files exist.
-    """
-    return all(
-        path.exists()
-        for path in required_database_files(database_prefix)
     )
 
 
@@ -176,18 +109,7 @@ def validate_database(
     database_prefix: Path,
     logger,
 ) -> bool:
-    """Validate a BLAST database using blastdbcmd.
-
-    Args:
-        database_prefix (Path): BLAST database prefix.
-        logger: Configured logger.
-
-    Returns:
-        bool: True when the database is readable and valid.
-    """
-    if not database_components_exist(database_prefix):
-        return False
-
+    """Validate a BLAST database using blastdbcmd."""
     result = run_command(
         [
             "blastdbcmd",
@@ -197,7 +119,7 @@ def validate_database(
             "nucl",
             "-info",
         ],
-        logger,
+        logger=logger,
     )
 
     return result.returncode == 0
@@ -207,116 +129,166 @@ def remove_database_files(
     database_prefix: Path,
     logger,
 ) -> None:
-    """Remove files associated with a BLAST database prefix.
-
-    Args:
-        database_prefix (Path): BLAST database prefix.
-        logger: Configured logger.
-    """
+    """Remove all files associated with a database prefix."""
     for path in database_files(database_prefix):
-        logger.info(f"Removing existing BLAST database file: {path}")
+        logger.info(
+            f"Removing BLAST database file: {path}"
+        )
         path.unlink()
 
 
-def build_database(
-    input_fasta: Path,
-    temporary_prefix: Path,
+def validate_reference_fasta(
+    reference_fasta: Path,
+    logger,
+) -> bool:
+    """Validate custom reference FASTA."""
+    if not reference_fasta.exists():
+        logger.error(
+            f"Reference FASTA does not exist: {reference_fasta}"
+        )
+        return False
+
+    if not reference_fasta.is_file():
+        logger.error(
+            f"Reference FASTA is not a file: {reference_fasta}"
+        )
+        return False
+
+    if reference_fasta.stat().st_size == 0:
+        logger.error(
+            f"Reference FASTA is empty: {reference_fasta}"
+        )
+        return False
+
+    return True
+
+
+def build_fasta_database(
+    reference_fasta: Path,
+    database_prefix: Path,
     database_title: str,
     parse_seqids: bool,
     logger,
 ) -> int:
-    """Run makeblastdb.
+    """Build a custom BLAST database from FASTA."""
+    database_prefix.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
 
-    Args:
-        input_fasta (Path): Reference FASTA.
-        temporary_prefix (Path): Temporary output database prefix.
-        database_title (str): Database title.
-        parse_seqids (bool): Whether to parse sequence identifiers.
-        logger: Configured logger.
+    with tempfile.TemporaryDirectory(
+        dir=database_prefix.parent,
+    ) as temporary_directory:
+        temporary_prefix = (
+            Path(temporary_directory)
+            / database_prefix.name
+        )
 
-    Returns:
-        int: makeblastdb exit code.
-    """
-    command = [
-        "makeblastdb",
-        "-in",
-        str(input_fasta),
-        "-dbtype",
-        "nucl",
-        "-out",
-        str(temporary_prefix),
-        "-title",
-        database_title,
-    ]
+        command = [
+            "makeblastdb",
+            "-in",
+            str(reference_fasta),
+            "-dbtype",
+            "nucl",
+            "-out",
+            str(temporary_prefix),
+            "-title",
+            database_title,
+        ]
 
-    if parse_seqids:
-        command.append("-parse_seqids")
+        if parse_seqids:
+            command.append("-parse_seqids")
 
-    result = run_command(command, logger)
+        result = run_command(
+            command,
+            logger=logger,
+        )
+
+        if result.returncode != 0:
+            return result.returncode
+
+        if not validate_database(
+            temporary_prefix,
+            logger,
+        ):
+            logger.error(
+                "Temporary BLAST database failed validation."
+            )
+            return 1
+
+        for source_path in database_files(
+            temporary_prefix
+        ):
+            suffix = source_path.name[
+                len(temporary_prefix.name):
+            ]
+
+            destination_path = Path(
+                f"{database_prefix}{suffix}"
+            )
+
+            shutil.move(
+                str(source_path),
+                str(destination_path),
+            )
+
+    return 0
+
+
+def download_ncbi_database(
+    database_name: str,
+    database_dir: Path,
+    logger,
+) -> int:
+    """Download or update an official NCBI BLAST database."""
+    database_dir.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    result = run_command(
+        [
+            "update_blastdb.pl",
+            "--decompress",
+            database_name,
+        ],
+        logger=logger,
+        cwd=database_dir,
+    )
 
     return result.returncode
 
 
-def install_database(
-    temporary_prefix: Path,
-    final_prefix: Path,
-    logger,
-) -> None:
-    """Move completed database files into their final location.
-
-    Args:
-        temporary_prefix (Path): Temporary database prefix.
-        final_prefix (Path): Final database prefix.
-        logger: Configured logger.
-    """
-    temporary_files = database_files(temporary_prefix)
-
-    if not temporary_files:
-        raise FileNotFoundError(
-            "No temporary BLAST database files were created."
-        )
-
-    final_prefix.parent.mkdir(parents=True, exist_ok=True)
-
-    for source_path in temporary_files:
-        suffix = source_path.name[len(temporary_prefix.name):]
-        destination_path = Path(f"{final_prefix}{suffix}")
-
-        logger.info(
-            f"Installing BLAST database file: "
-            f"{source_path} -> {destination_path}"
-        )
-
-        shutil.move(
-            str(source_path),
-            str(destination_path),
-        )
-
-
 def write_metadata(
     metadata_file: Path,
-    input_fasta: Path,
+    database_source: str,
+    database_name: str,
     database_prefix: Path,
-    database_title: str,
+    reference_fasta: Path | None = None,
 ) -> None:
-    """Write BLAST database setup metadata.
-
-    Args:
-        metadata_file (Path): Metadata JSON path.
-        input_fasta (Path): Source FASTA.
-        database_prefix (Path): Final database prefix.
-        database_title (str): Database title.
-    """
+    """Write database setup metadata."""
     metadata = {
         "database_type": "nucl",
-        "database_title": database_title,
-        "database_prefix": str(database_prefix.resolve()),
-        "input_fasta": str(input_fasta.resolve()),
-        "input_fasta_size_bytes": input_fasta.stat().st_size,
+        "database_source": database_source,
+        "database_name": database_name,
+        "database_prefix": str(
+            database_prefix.resolve()
+        ),
         "created_at": datetime.now().isoformat(),
     }
 
-    metadata_file.parent.mkdir(parents=True, exist_ok=True)
+    if reference_fasta is not None:
+        metadata["reference_fasta"] = str(
+            reference_fasta.resolve()
+        )
+        metadata["reference_fasta_size_bytes"] = (
+            reference_fasta.stat().st_size
+        )
+
+    metadata_file.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
     metadata_file.write_text(
         json.dumps(metadata, indent=2),
         encoding="utf-8",
@@ -327,25 +299,165 @@ def write_done_file(
     done_file: Path,
     database_prefix: Path,
 ) -> None:
-    """Write setup completion marker.
-
-    Args:
-        done_file (Path): Done-file path.
-        database_prefix (Path): Database prefix.
-    """
-    done_file.parent.mkdir(parents=True, exist_ok=True)
+    """Write database setup completion marker."""
+    done_file.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
     done_file.write_text(
         f"{database_prefix}\n",
         encoding="utf-8",
     )
 
 
-def main() -> int:
-    """Build and validate local BLAST database.
+def setup_fasta_database(
+    reference_fasta: Path,
+    database_prefix: Path,
+    database_title: str,
+    parse_seqids: bool,
+    overwrite: bool,
+    metadata_file: Path,
+    done_file: Path,
+    logger,
+) -> int:
+    """Set up a local custom FASTA database."""
+    if not validate_reference_fasta(
+        reference_fasta,
+        logger,
+    ):
+        return 1
 
-    Returns:
-        int: Exit code.
-    """
+    if (
+        not overwrite
+        and validate_database(database_prefix, logger)
+    ):
+        logger.info(
+            f"Existing BLAST database is valid: "
+            f"{database_prefix}"
+        )
+        write_done_file(
+            done_file,
+            database_prefix,
+        )
+        return 0
+
+    existing_files = database_files(
+        database_prefix
+    )
+
+    if existing_files and not overwrite:
+        logger.error(
+            "Existing BLAST database files failed validation. "
+            "Use overwrite_database: true to rebuild them."
+        )
+        return 1
+
+    if existing_files:
+        remove_database_files(
+            database_prefix,
+            logger,
+        )
+
+    return_code = build_fasta_database(
+        reference_fasta=reference_fasta,
+        database_prefix=database_prefix,
+        database_title=database_title,
+        parse_seqids=parse_seqids,
+        logger=logger,
+    )
+
+    if return_code != 0:
+        return return_code
+
+    if not validate_database(
+        database_prefix,
+        logger,
+    ):
+        logger.error(
+            "Installed BLAST database failed validation."
+        )
+        return 1
+
+    write_metadata(
+        metadata_file=metadata_file,
+        database_source="fasta",
+        database_name=database_prefix.name,
+        database_prefix=database_prefix,
+        reference_fasta=reference_fasta,
+    )
+    write_done_file(
+        done_file,
+        database_prefix,
+    )
+
+    return 0
+
+
+def setup_ncbi_database(
+    database_name: str,
+    database_prefix: Path,
+    database_dir: Path,
+    overwrite: bool,
+    metadata_file: Path,
+    done_file: Path,
+    logger,
+) -> int:
+    """Set up an official preformatted NCBI database."""
+    if (
+        not overwrite
+        and validate_database(database_prefix, logger)
+    ):
+        logger.info(
+            f"Existing NCBI BLAST database is valid: "
+            f"{database_prefix}"
+        )
+        write_done_file(
+            done_file,
+            database_prefix,
+        )
+        return 0
+
+    if overwrite:
+        remove_database_files(
+            database_prefix,
+            logger,
+        )
+
+    return_code = download_ncbi_database(
+        database_name=database_name,
+        database_dir=database_dir,
+        logger=logger,
+    )
+
+    if return_code != 0:
+        return return_code
+
+    if not validate_database(
+        database_prefix,
+        logger,
+    ):
+        logger.error(
+            f"Downloaded NCBI database failed validation: "
+            f"{database_prefix}"
+        )
+        return 1
+
+    write_metadata(
+        metadata_file=metadata_file,
+        database_source="ncbi",
+        database_name=database_name,
+        database_prefix=database_prefix,
+    )
+    write_done_file(
+        done_file,
+        database_prefix,
+    )
+
+    return 0
+
+
+def main() -> int:
+    """Set up selected local BLAST database."""
     args = parse_args()
 
     logger = make_logger(
@@ -353,152 +465,54 @@ def main() -> int:
         log_file_path=args.log_file,
     )
 
-    input_fasta = Path(args.input_fasta)
-    database_prefix = Path(args.database_prefix)
-    done_file = Path(args.done_file)
-
-    metadata_file = (
-        Path(args.metadata_file)
-        if args.metadata_file is not None
-        else Path(f"{database_prefix}.metadata.json")
+    database_dir = Path(args.database_dir)
+    database_prefix = (
+        database_dir
+        / args.database_name
+    )
+    reference_fasta = Path(
+        args.reference_fasta
+    )
+    metadata_file = Path(
+        args.metadata_file
+    )
+    done_file = Path(
+        args.done_file
     )
 
     logger.info(
-        f"Initializing BLAST database: {database_prefix}"
-    )
-    logger.debug(
-        f"Reference FASTA: {input_fasta}"
+        f"Initializing {args.database_source} BLAST database: "
+        f"{database_prefix}"
     )
 
-    # Validating source FASTA.
-    if not input_fasta.exists():
-        logger.error(
-            f"Reference FASTA does not exist: {input_fasta}"
-        )
-        return 1
-
-    if not input_fasta.is_file():
-        logger.error(
-            f"Reference FASTA is not a file: {input_fasta}"
-        )
-        return 1
-
-    if input_fasta.stat().st_size == 0:
-        logger.error(
-            f"Reference FASTA is empty: {input_fasta}"
-        )
-        return 1
-
-    existing_files = database_files(database_prefix)
-    complete_database = database_components_exist(database_prefix)
-
-    # Skipping when a valid database already exists.
-    if complete_database and not args.overwrite:
-        logger.info(
-            f"Existing BLAST database detected: {database_prefix}"
-        )
-
-        if validate_database(database_prefix, logger):
-            logger.info(
-                f"Existing BLAST database is valid: {database_prefix}"
+    try:
+        if args.database_source == "fasta":
+            return setup_fasta_database(
+                reference_fasta=reference_fasta,
+                database_prefix=database_prefix,
+                database_title=args.database_title,
+                parse_seqids=args.parse_seqids,
+                overwrite=args.overwrite,
+                metadata_file=metadata_file,
+                done_file=done_file,
+                logger=logger,
             )
-            write_done_file(done_file, database_prefix)
-            return 0
 
-        logger.error(
-            "Existing BLAST database files were detected, but the database "
-            "failed validation. Use --overwrite to rebuild it."
-        )
-        return 1
-
-    # Refusing partial existing databases unless overwrite was requested.
-    if existing_files and not complete_database and not args.overwrite:
-        logger.error(
-            "Incomplete BLAST database files were detected: "
-            f"{existing_files}. Use --overwrite to rebuild the database."
-        )
-        return 1
-
-    # Removing existing files when rebuilding.
-    if existing_files and args.overwrite:
-        remove_database_files(database_prefix, logger)
-
-    database_prefix.parent.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
-    # Building into a temporary directory.
-    with tempfile.TemporaryDirectory(
-        dir=database_prefix.parent
-    ) as temporary_directory:
-        temporary_directory_path = Path(temporary_directory)
-        temporary_prefix = (
-            temporary_directory_path / database_prefix.name
-        )
-
-        logger.info(
-            f"Building nucleotide BLAST database from {input_fasta}."
-        )
-
-        return_code = build_database(
-            input_fasta=input_fasta,
-            temporary_prefix=temporary_prefix,
-            database_title=args.database_title,
-            parse_seqids=args.parse_seqids,
+        return setup_ncbi_database(
+            database_name=args.database_name,
+            database_prefix=database_prefix,
+            database_dir=database_dir,
+            overwrite=args.overwrite,
+            metadata_file=metadata_file,
+            done_file=done_file,
             logger=logger,
         )
 
-        if return_code != 0:
-            logger.error(
-                f"makeblastdb failed with return code {return_code}."
-            )
-            return return_code
-
-        # Validating before installation.
-        if not validate_database(temporary_prefix, logger):
-            logger.error(
-                "Temporary BLAST database failed validation."
-            )
-            return 1
-
-        try:
-            install_database(
-                temporary_prefix=temporary_prefix,
-                final_prefix=database_prefix,
-                logger=logger,
-            )
-        except (FileNotFoundError, OSError) as error:
-            logger.exception(
-                f"Failed to install BLAST database: {error}"
-            )
-            return 1
-
-    # Final validation.
-    if not validate_database(database_prefix, logger):
-        logger.error(
-            f"Installed BLAST database failed validation: "
-            f"{database_prefix}"
+    except Exception as error:
+        logger.exception(
+            f"BLAST database setup failed: {error}"
         )
         return 1
-
-    write_metadata(
-        metadata_file=metadata_file,
-        input_fasta=input_fasta,
-        database_prefix=database_prefix,
-        database_title=args.database_title,
-    )
-
-    write_done_file(
-        done_file=done_file,
-        database_prefix=database_prefix,
-    )
-
-    logger.info(
-        f"BLAST database initialized successfully: {database_prefix}"
-    )
-
-    return 0
 
 
 if __name__ == "__main__":

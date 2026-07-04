@@ -26,32 +26,50 @@ class DummyLogger:
         pass
 
 
-def make_args(tmp_path: Path) -> SimpleNamespace:
-    """Create execution-layer arguments.
+def make_args(
+    tmp_path: Path,
+    **overrides,
+) -> SimpleNamespace:
+    """Create representative run_blast arguments."""
+    arguments = {
+        "sample_id": "sample_001",
+        "query_fasta": str(
+            tmp_path
+            / "assembly"
+            / "sample_001.fasta"
+        ),
+        "database": str(
+            tmp_path
+            / "resources"
+            / "blast"
+            / "fish_mito"
+        ),
+        "mode": "local",
+        "output_dir": str(
+            tmp_path
+            / "phylogeny"
+            / "blast"
+        ),
+        "working_dir": str(tmp_path),
+        "threads": 4,
+        "log_file": str(
+            tmp_path
+            / "logs"
+            / "blast.log"
+        ),
+        "task": "blastn",
+        "output_format": "6 qseqid sseqid",
+        "evalue": 1e-5,
+        "max_target_seqs": 50,
+        "max_hsps": 1,
+        "perc_identity": None,
+        "query_coverage": None,
+        "word_size": None,
+    }
 
-    Args:
-        tmp_path (Path): Temporary pytest directory.
+    arguments.update(overrides)
 
-    Returns:
-        SimpleNamespace: Argument-like object.
-    """
-    return SimpleNamespace(
-        sample_id="sample_001",
-        query_fasta=str(tmp_path / "sample_001.fasta"),
-        database=str(tmp_path / "database" / "fish_mito"),
-        output_dir=str(tmp_path / "blast"),
-        working_dir=str(tmp_path),
-        threads=4,
-        log_file=str(tmp_path / "blast.log"),
-        task="blastn",
-        output_format="6 qseqid sseqid pident",
-        evalue=1e-5,
-        max_target_seqs=10,
-        max_hsps=1,
-        perc_identity=None,
-        query_coverage=None,
-        word_size=None,
-    )
+    return SimpleNamespace(**arguments)
 
 
 def test_build_logger_uses_blast_logger_name(tmp_path, monkeypatch):
@@ -153,13 +171,13 @@ def test_main_passes_arguments_to_blast_runner(tmp_path, monkeypatch):
 
     assert result == 0
     assert captured["query_fasta"] == Path(args.query_fasta)
-    assert captured["database"] == Path(args.database)
+    assert captured["database"] == args.database
     assert captured["output_dir"] == Path(args.output_dir)
     assert captured["working_dir"] == Path(args.working_dir)
     assert captured["sample_id"] == "sample_001"
     assert captured["threads"] == 4
     assert captured["task"] == "blastn"
-    assert captured["max_target_seqs"] == 10
+    assert captured["max_target_seqs"] == 50
     assert captured["max_hsps"] == 1
 
 

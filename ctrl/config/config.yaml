@@ -82,28 +82,28 @@ tools:
     best: false # Whether to use the "best" mode in mitos2 (true/false).
     ncbicode: false # Whether to use NCBI code for mitos2 (true/false).
     zip_output: false # Whether to create zipped output for mitos2 (true/false).
-  blast: # Options for BLAST.
   blast:
-    initialize_database: true # Whether to initialize the BLAST database.
-
-    reference_fasta: resources/blast/fish_mitogenomes.fasta # Path to the reference FASTA file for BLAST.
-    database: resources/blast/fish_mitogenomes # Path to the BLAST database prefix.
-    database_title: Fish mitochondrial reference genomes # Title for the BLAST database.
-    parse_seqids: true # Whether to parse sequence identifiers in the BLAST database.
-    overwrite_database: false # Whether to overwrite the BLAST database if it already exists.
-    threads: 4 # Number of threads to use for BLAST.
-    task: blastn # BLAST task to use.
-    evalue: 1.0e-5 # E-value threshold for BLAST.
-    max_target_seqs: 10 # Maximum number of target sequences to report.
-    max_hsps: 1 # Maximum number of HSPs to report.
-    perc_identity: null # Percentage identity threshold for BLAST.
-    query_coverage: null # Query coverage threshold for BLAST.
-    word_size: null # Word size for BLAST.
-
+    mode: local # local | remote
+    database_source: ncbi # ncbi | fasta; ignored in remote mode
+    database_name: refseq_genomic # Name of the BLAST database
+    database_dir: resources/blast # Path to the BLAST database directory
+    reference_fasta: resources/blast/reference_mitogenomes.fasta # Path to the reference FASTA file
+    database_title: MitoPipeline mitochondrial reference database # Title of the BLAST database
+    initialize_database: true # Whether to initialize the BLAST database
+    overwrite_database: false # Whether to overwrite the BLAST database
+    parse_seqids: true # Whether to parse sequence IDs in the BLAST database
+    threads: 4 # Number of threads to use for BLAST
+    task: blastn # BLAST task to use
+    evalue: 1.0e-5 # E-value threshold
+    max_target_seqs: 50 # Maximum number of target sequences to retrieve
+    max_hsps: 1 # Maximum number of HSPs to retrieve
+    maximum_matches: 6 # Maximum number of matches to select
+    perc_identity: null # Percentage identity threshold
+    query_coverage: null # Query coverage threshold
+    word_size: null # Word size for BLAST
     output_format: >-
       6 qseqid sseqid pident length mismatch gapopen
       qstart qend sstart send evalue bitscore qcovs
       staxids sscinames stitle
-    # Output format for BLAST.
-
+    # Output format for BLAST
   

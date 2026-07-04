@@ -1,17 +1,17 @@
 """blast.py
 
-API wrapper for running local nucleotide BLAST searches.
+API wrapper for local and remote nucleotide BLAST searches.
 """
 
 # Imports
 import os
+import subprocess
 from logging import Logger
 from pathlib import Path
 
 from mitopipeline.api.base_tool import BaseTool
 
 
-# Constants
 VALID_BLAST_TASKS = {
     "blastn",
     "megablast",
@@ -19,79 +19,52 @@ VALID_BLAST_TASKS = {
     "blastn-short",
 }
 
+VALID_BLAST_MODES = {
+    "local",
+    "remote",
+}
+
 DEFAULT_OUTFMT = (
-    "6 "
-    "qseqid "
-    "sseqid "
-    "pident "
-    "length "
-    "mismatch "
-    "gapopen "
-    "qstart "
-    "qend "
-    "sstart "
-    "send "
-    "evalue "
-    "bitscore "
-    "qcovs "
-    "staxids "
-    "sscinames "
-    "stitle"
+    "6 qseqid sseqid pident length mismatch gapopen "
+    "qstart qend sstart send evalue bitscore qcovs "
+    "staxids sscinames stitle"
 )
 
 
 class BlastRunner(BaseTool):
-    """Runner for local BLAST nucleotide searches."""
+    """Run local or NCBI remote nucleotide BLAST."""
 
     def __init__(
         self,
         query_fasta: str | Path,
-        database: str | Path,
+        database: str,
         output_dir: str | Path,
         working_dir: str | Path,
         sample_id: str,
+        mode: str = "local",
         threads: int = 4,
         task: str = "blastn",
         output_format: str = DEFAULT_OUTFMT,
         evalue: float = 1e-5,
-        max_target_seqs: int = 10,
+        max_target_seqs: int = 50,
         max_hsps: int | None = 1,
         perc_identity: float | None = None,
         query_coverage: float | None = None,
         word_size: int | None = None,
         logger: Logger | None = None,
     ) -> None:
-        """Initialize BlastRunner.
-
-        Args:
-            query_fasta (str | Path): Query mitochondrial genome FASTA.
-            database (str | Path): BLAST database prefix.
-            output_dir (str | Path): Directory for BLAST results.
-            working_dir (str | Path): Working directory for execution.
-            sample_id (str): Sample identifier used in output names.
-            threads (int, optional): Number of BLAST threads. Defaults to 4.
-            task (str, optional): blastn task. Defaults to "blastn".
-            output_format (str, optional): BLAST output format.
-            evalue (float, optional): Maximum expected value. Defaults to 1e-5.
-            max_target_seqs (int, optional): Maximum subject sequences retained.
-            max_hsps (int | None, optional): Maximum HSPs per query-subject pair.
-            perc_identity (float | None, optional): Minimum percent identity.
-            query_coverage (float | None, optional): Minimum HSP query coverage.
-            word_size (int | None, optional): BLAST word size.
-            logger (Logger | None, optional): Logger object.
-        """
+        """Initialize BLAST runner."""
         super().__init__(
             tool_name="blast",
             working_dir=Path(working_dir),
             logger=logger,
         )
 
-        # Checking input files and options.
         self.query_fasta = Path(query_fasta)
-        self.database = Path(database)
+        self.database = database
         self.output_dir = Path(output_dir)
         self.sample_id = sample_id
-
+        self.mode = mode
         self.threads = threads
         self.task = task
         self.output_format = output_format
@@ -103,97 +76,66 @@ class BlastRunner(BaseTool):
         self.word_size = word_size
 
     def validate_inputs(self) -> None:
-        """Validate BLAST input files and options.
-        
-        Raises:
-            FileNotFoundError: Query FASTA does not exist.
-            ValueError: Query FASTA is empty.
-        """
-
-        # Checking query FASTA.
+        """Validate query, database, and BLAST options."""
         if not self.query_fasta.exists():
-            self._log_error(
-                f"Query FASTA does not exist: {self.query_fasta}"
-            )
             raise FileNotFoundError(
                 f"({self.tool_name}) Query FASTA does not exist: "
                 f"{self.query_fasta}"
             )
 
         if not self.query_fasta.is_file():
-            self._log_error(
-                f"Query FASTA is not a file: {self.query_fasta}"
-            )
             raise ValueError(
                 f"({self.tool_name}) Query FASTA is not a file: "
                 f"{self.query_fasta}"
             )
 
         if self.query_fasta.stat().st_size == 0:
-            self._log_error(
-                f"Query FASTA is empty: {self.query_fasta}"
-            )
             raise ValueError(
                 f"({self.tool_name}) Query FASTA is empty: "
                 f"{self.query_fasta}"
             )
 
-        # Checking database prefix and required files.
-        missing_database_files = [
-            path
-            for path in self._required_database_files()
-            if not path.exists()
-        ]
-
-        if missing_database_files:
-            self._log_error(
-                "BLAST database is incomplete. Missing files: "
-                f"{missing_database_files}"
-            )
-            raise FileNotFoundError(
-                f"({self.tool_name}) BLAST database is incomplete. "
-                f"Missing files: {missing_database_files}"
+        if self.mode not in VALID_BLAST_MODES:
+            raise ValueError(
+                f"({self.tool_name}) Unsupported BLAST mode: "
+                f"{self.mode}"
             )
 
-        # Checking sample identifier.
-        if self.sample_id.strip() == "":
-            self._log_error("sample_id must not be empty.")
+        if not self.database.strip():
+            raise ValueError(
+                f"({self.tool_name}) database must not be empty."
+            )
+
+        if not self.sample_id.strip():
             raise ValueError(
                 f"({self.tool_name}) sample_id must not be empty."
             )
 
-        # Checking threads.
+        if self.mode == "local":
+            self._validate_local_database()
+
         available_cpus = os.cpu_count()
 
         if self.threads <= 0:
-            self._log_error(
-                f"Invalid number of threads: {self.threads}"
-            )
             raise ValueError(
-                f"({self.tool_name}) Invalid number of threads: "
-                f"{self.threads}"
+                f"({self.tool_name}) threads must be greater than zero."
             )
 
-        if available_cpus is not None and self.threads > available_cpus:
-            self._log_error(
-                "Number of threads exceeds available CPU cores. "
+        if (
+            available_cpus is not None
+            and self.threads > available_cpus
+        ):
+            raise ValueError(
+                f"({self.tool_name}) Threads exceed available CPUs: "
                 f"{self.threads} > {available_cpus}"
             )
-            raise ValueError(
-                f"({self.tool_name}) Number of threads exceeds available "
-                f"CPU cores. {self.threads} > {available_cpus}"
-            )
 
-        # Checking BLAST task.
         if self.task not in VALID_BLAST_TASKS:
-            self._log_error(
-                f"Unsupported BLAST task: {self.task}"
-            )
             raise ValueError(
-                f"({self.tool_name}) Unsupported BLAST task: {self.task}"
+                f"({self.tool_name}) Unsupported BLAST task: "
+                f"{self.task}"
             )
 
-        # Checking numeric options.
         if self.evalue <= 0:
             raise ValueError(
                 f"({self.tool_name}) evalue must be greater than zero."
@@ -201,7 +143,8 @@ class BlastRunner(BaseTool):
 
         if self.max_target_seqs <= 0:
             raise ValueError(
-                f"({self.tool_name}) max_target_seqs must be greater than zero."
+                f"({self.tool_name}) max_target_seqs must be "
+                f"greater than zero."
             )
 
         if self.max_hsps is not None and self.max_hsps <= 0:
@@ -214,7 +157,8 @@ class BlastRunner(BaseTool):
             and not 0 <= self.perc_identity <= 100
         ):
             raise ValueError(
-                f"({self.tool_name}) perc_identity must be between 0 and 100."
+                f"({self.tool_name}) perc_identity must be "
+                f"between 0 and 100."
             )
 
         if (
@@ -222,7 +166,8 @@ class BlastRunner(BaseTool):
             and not 0 <= self.query_coverage <= 100
         ):
             raise ValueError(
-                f"({self.tool_name}) query_coverage must be between 0 and 100."
+                f"({self.tool_name}) query_coverage must be "
+                f"between 0 and 100."
             )
 
         if self.word_size is not None and self.word_size <= 0:
@@ -231,19 +176,18 @@ class BlastRunner(BaseTool):
             )
 
     def build_command(self) -> list[str]:
-        """Build the local blastn command.
-
-        Returns:
-            list[str]: BLAST command.
-        """
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+        """Build blastn command."""
+        self.output_dir.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
 
         command = [
             "blastn",
             "-query",
             str(self.query_fasta),
             "-db",
-            str(self.database),
+            self.database,
             "-out",
             str(self._expected_blast_output()),
             "-outfmt",
@@ -254,9 +198,15 @@ class BlastRunner(BaseTool):
             str(self.evalue),
             "-max_target_seqs",
             str(self.max_target_seqs),
-            "-num_threads",
-            str(self.threads),
         ]
+
+        if self.mode == "remote":
+            command.append("-remote")
+        else:
+            command.extend([
+                "-num_threads",
+                str(self.threads),
+            ])
 
         if self.max_hsps is not None:
             command.extend([
@@ -285,58 +235,55 @@ class BlastRunner(BaseTool):
         return command
 
     def validate_outputs(self) -> None:
-        """Validate BLAST output file."""
+        """Validate BLAST output."""
         output_file = self._expected_blast_output()
 
         if not output_file.exists():
-            self._log_error(
-                f"Expected BLAST output does not exist: {output_file}"
-            )
             raise FileNotFoundError(
-                f"({self.tool_name}) Expected BLAST output does not exist: "
+                f"({self.tool_name}) Expected output does not exist: "
                 f"{output_file}"
             )
 
         if not output_file.is_file():
-            self._log_error(
-                f"Expected BLAST output is not a file: {output_file}"
-            )
             raise ValueError(
-                f"({self.tool_name}) Expected BLAST output is not a file: "
+                f"({self.tool_name}) Expected output is not a file: "
                 f"{output_file}"
             )
 
-        # Empty output is valid when BLAST finds no matching sequences.
-        if output_file.stat().st_size == 0:
-            if self.logger is not None:
-                self.logger.warning(
-                    f"({self.tool_name}) BLAST completed successfully but "
-                    f"returned no hits for sample {self.sample_id}."
-                )
+        if (
+            output_file.stat().st_size == 0
+            and self.logger is not None
+        ):
+            self.logger.warning(
+                f"({self.tool_name}) BLAST returned no hits for "
+                f"sample {self.sample_id}."
+            )
+
+    def _validate_local_database(self) -> None:
+        """Validate local database through blastdbcmd."""
+        result = subprocess.run(
+            [
+                "blastdbcmd",
+                "-db",
+                self.database,
+                "-dbtype",
+                "nucl",
+                "-info",
+            ],
+            capture_output=True,
+            text=True,
+        )
+
+        if result.returncode != 0:
+            raise FileNotFoundError(
+                f"({self.tool_name}) Local BLAST database is missing "
+                f"or invalid: {self.database}. "
+                f"{result.stderr.strip()}"
+            )
 
     def _expected_blast_output(self) -> Path:
-        """Return expected BLAST results path.
-
-        Returns:
-            Path: Expected BLAST TSV path.
-        """
-        return self.output_dir / f"{self.sample_id}.blast.tsv"
-
-    def _required_database_files(self) -> list[Path]:
-        """Return required nucleotide BLAST database files.
-
-        Returns:
-            list[Path]: Required database component paths.
-        """
-        prefix = str(self.database)
-
-        return [
-            Path(f"{prefix}.nhr"),
-            Path(f"{prefix}.nin"),
-            Path(f"{prefix}.nsq"),
-        ]
-
-    def _log_error(self, message: str) -> None:
-        """Log an error when a logger is available."""
-        if self.logger is not None:
-            self.logger.error(f"({self.tool_name}) {message}")
+        """Return expected BLAST output path."""
+        return (
+            self.output_dir
+            / f"{self.sample_id}.blast.tsv"
+        )

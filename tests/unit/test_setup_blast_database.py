@@ -1,9 +1,10 @@
 """test_setup_blast_database.py
 
-Unit tests for local BLAST database setup.
+Unit tests for NCBI and custom FASTA BLAST database setup.
 """
 
 # Imports
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -11,7 +12,7 @@ from mitopipeline.utils import setup_blast_database
 
 
 class DummyLogger:
-    """Minimal logger implementation for database setup tests."""
+    """Minimal test logger."""
 
     def info(self, message):
         pass
@@ -26,127 +27,72 @@ class DummyLogger:
         pass
 
 
-def write_file(path: Path, contents: str = "test\n") -> None:
-    """Write a text file and create parent directories."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(contents, encoding="utf-8")
-
-
-def make_database_files(database_prefix: Path) -> None:
-    """Create minimal required nucleotide database files."""
-    write_file(Path(f"{database_prefix}.nhr"))
-    write_file(Path(f"{database_prefix}.nin"))
-    write_file(Path(f"{database_prefix}.nsq"))
-
-
-def make_args(tmp_path: Path) -> SimpleNamespace:
-    """Create database setup arguments."""
-    return SimpleNamespace(
-        input_fasta=str(tmp_path / "references.fasta"),
-        database_prefix=str(
-            tmp_path / "blast" / "fish_mito"
-        ),
-        database_title="Fish mitochondrial genomes",
-        done_file=str(
-            tmp_path / "setup" / "blast.done"
-        ),
-        log_file=str(tmp_path / "logs" / "blast.log"),
-        metadata_file=str(
-            tmp_path / "setup" / "blast.metadata.json"
-        ),
-        parse_seqids=False,
-        overwrite=False,
+def write_file(
+    path: Path,
+    contents: str = "test\n",
+) -> None:
+    """Write test file."""
+    path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+    path.write_text(
+        contents,
+        encoding="utf-8",
     )
 
 
-def test_required_database_files_returns_expected_paths(tmp_path):
-    """Test required nucleotide database paths are generated."""
-    prefix = tmp_path / "blast" / "fish_mito"
-
-    paths = setup_blast_database.required_database_files(prefix)
-
-    assert paths == [
-        Path(f"{prefix}.nhr"),
-        Path(f"{prefix}.nin"),
-        Path(f"{prefix}.nsq"),
-    ]
-
-
-def test_database_components_exist_returns_true_for_complete_database(
+def test_database_files_support_multivolume_database(
     tmp_path,
 ):
-    """Test complete database components are detected."""
-    prefix = tmp_path / "blast" / "fish_mito"
-    make_database_files(prefix)
-
-    assert (
-        setup_blast_database.database_components_exist(prefix)
-        is True
+    """Test numbered NCBI database volumes are discovered."""
+    prefix = (
+        tmp_path
+        / "blast"
+        / "refseq_genomic"
     )
 
-
-def test_database_components_exist_returns_false_for_partial_database(
-    tmp_path,
-):
-    """Test incomplete database components are detected."""
-    prefix = tmp_path / "blast" / "fish_mito"
-
-    write_file(Path(f"{prefix}.nhr"))
-    write_file(Path(f"{prefix}.nin"))
-
-    assert (
-        setup_blast_database.database_components_exist(prefix)
-        is False
+    write_file(
+        Path(f"{prefix}.00.nhr")
+    )
+    write_file(
+        Path(f"{prefix}.00.nin")
+    )
+    write_file(
+        Path(f"{prefix}.00.nsq")
     )
 
-
-def test_database_files_returns_matching_files(tmp_path):
-    """Test database_files finds files belonging to a prefix."""
-    prefix = tmp_path / "blast" / "fish_mito"
-
-    make_database_files(prefix)
-    write_file(Path(f"{prefix}.metadata.json"))
-    write_file(prefix.parent / "different_database.nhr")
-
-    files = setup_blast_database.database_files(prefix)
-
-    assert Path(f"{prefix}.nhr") in files
-    assert Path(f"{prefix}.nin") in files
-    assert Path(f"{prefix}.nsq") in files
-    assert Path(f"{prefix}.metadata.json") in files
-    assert prefix.parent / "different_database.nhr" not in files
-
-
-def test_validate_database_returns_false_when_components_missing(
-    tmp_path,
-):
-    """Test validate_database fails before invoking blastdbcmd."""
-    prefix = tmp_path / "blast" / "fish_mito"
-
-    result = setup_blast_database.validate_database(
-        prefix,
-        DummyLogger(),
+    files = setup_blast_database.database_files(
+        prefix
     )
 
-    assert result is False
+    assert Path(f"{prefix}.00.nhr") in files
+    assert Path(f"{prefix}.00.nin") in files
+    assert Path(f"{prefix}.00.nsq") in files
 
 
-def test_validate_database_returns_true_when_blastdbcmd_succeeds(
+def test_validate_database_uses_blastdbcmd(
     tmp_path,
     monkeypatch,
 ):
-    """Test validate_database accepts a readable database."""
-    prefix = tmp_path / "blast" / "fish_mito"
-    make_database_files(prefix)
-
+    """Test database validation uses blastdbcmd."""
+    prefix = (
+        tmp_path
+        / "blast"
+        / "refseq_genomic"
+    )
     captured = {}
 
-    def fake_run_command(command, logger):
+    def fake_run_command(
+        command,
+        logger,
+        cwd=None,
+    ):
         captured["command"] = command
 
         return SimpleNamespace(
             returncode=0,
-            stdout="Database: fish_mito",
+            stdout="",
             stderr="",
         )
 
@@ -156,12 +102,11 @@ def test_validate_database_returns_true_when_blastdbcmd_succeeds(
         fake_run_command,
     )
 
-    result = setup_blast_database.validate_database(
+    assert setup_blast_database.validate_database(
         prefix,
         DummyLogger(),
     )
 
-    assert result is True
     assert captured["command"] == [
         "blastdbcmd",
         "-db",
@@ -172,62 +117,20 @@ def test_validate_database_returns_true_when_blastdbcmd_succeeds(
     ]
 
 
-def test_validate_database_returns_false_when_blastdbcmd_fails(
+def test_download_ncbi_database_uses_database_name(
     tmp_path,
     monkeypatch,
 ):
-    """Test validate_database rejects an unreadable database."""
-    prefix = tmp_path / "blast" / "fish_mito"
-    make_database_files(prefix)
-
-    monkeypatch.setattr(
-        setup_blast_database,
-        "run_command",
-        lambda command, logger: SimpleNamespace(
-            returncode=1,
-            stdout="",
-            stderr="invalid database",
-        ),
-    )
-
-    assert (
-        setup_blast_database.validate_database(
-            prefix,
-            DummyLogger(),
-        )
-        is False
-    )
-
-
-def test_remove_database_files_removes_matching_files(tmp_path):
-    """Test removal deletes all files associated with a prefix."""
-    prefix = tmp_path / "blast" / "fish_mito"
-    make_database_files(prefix)
-
-    setup_blast_database.remove_database_files(
-        prefix,
-        DummyLogger(),
-    )
-
-    assert setup_blast_database.database_files(prefix) == []
-
-
-def test_build_database_constructs_makeblastdb_command(
-    tmp_path,
-    monkeypatch,
-):
-    """Test build_database constructs the expected command."""
-    input_fasta = tmp_path / "references.fasta"
-    prefix = tmp_path / "temporary" / "fish_mito"
+    """Test NCBI downloader uses switchboard database_name."""
     captured = {}
 
-    write_file(
-        input_fasta,
-        ">reference\nATGCATGC\n",
-    )
-
-    def fake_run_command(command, logger):
+    def fake_run_command(
+        command,
+        logger,
+        cwd=None,
+    ):
         captured["command"] = command
+        captured["cwd"] = cwd
 
         return SimpleNamespace(
             returncode=0,
@@ -241,204 +144,196 @@ def test_build_database_constructs_makeblastdb_command(
         fake_run_command,
     )
 
-    return_code = setup_blast_database.build_database(
-        input_fasta=input_fasta,
-        temporary_prefix=prefix,
-        database_title="Fish mitochondrial genomes",
-        parse_seqids=True,
+    database_dir = tmp_path / "blast"
+
+    result = setup_blast_database.download_ncbi_database(
+        database_name="refseq_genomic",
+        database_dir=database_dir,
         logger=DummyLogger(),
     )
 
-    assert return_code == 0
+    assert result == 0
     assert captured["command"] == [
-        "makeblastdb",
-        "-in",
-        str(input_fasta),
-        "-dbtype",
-        "nucl",
-        "-out",
-        str(prefix),
-        "-title",
-        "Fish mitochondrial genomes",
-        "-parse_seqids",
+        "update_blastdb.pl",
+        "--decompress",
+        "refseq_genomic",
     ]
+    assert captured["cwd"] == database_dir
 
 
-def test_install_database_moves_database_files(tmp_path):
-    """Test temporary database files are moved to final prefix."""
-    temporary_prefix = (
-        tmp_path
-        / "temporary"
-        / "fish_mito"
-    )
-    final_prefix = (
-        tmp_path
-        / "final"
-        / "fish_mito"
-    )
-
-    make_database_files(temporary_prefix)
-
-    setup_blast_database.install_database(
-        temporary_prefix=temporary_prefix,
-        final_prefix=final_prefix,
-        logger=DummyLogger(),
-    )
-
-    assert Path(f"{final_prefix}.nhr").exists()
-    assert Path(f"{final_prefix}.nin").exists()
-    assert Path(f"{final_prefix}.nsq").exists()
-
-    assert not Path(f"{temporary_prefix}.nhr").exists()
-    assert not Path(f"{temporary_prefix}.nin").exists()
-    assert not Path(f"{temporary_prefix}.nsq").exists()
-
-
-def test_write_done_file_records_database_prefix(tmp_path):
-    """Test completion marker contains the database prefix."""
-    done_file = tmp_path / "setup" / "blast.done"
-    prefix = tmp_path / "blast" / "fish_mito"
-
-    setup_blast_database.write_done_file(
-        done_file,
-        prefix,
-    )
-
-    assert done_file.read_text(
-        encoding="utf-8"
-    ) == f"{prefix}\n"
-
-
-def test_main_returns_one_for_missing_reference_fasta(
+def test_reference_fasta_validation(
     tmp_path,
-    monkeypatch,
 ):
-    """Test setup fails when reference FASTA is absent."""
-    args = make_args(tmp_path)
-
-    monkeypatch.setattr(
-        setup_blast_database,
-        "parse_args",
-        lambda: args,
+    """Test valid FASTA is accepted."""
+    reference_fasta = (
+        tmp_path
+        / "references.fasta"
     )
-    monkeypatch.setattr(
-        setup_blast_database,
-        "make_logger",
-        lambda **kwargs: DummyLogger(),
-    )
-
-    assert setup_blast_database.main() == 1
-
-
-def test_main_skips_valid_existing_database(
-    tmp_path,
-    monkeypatch,
-):
-    """Test setup skips rebuilding an existing valid database."""
-    args = make_args(tmp_path)
-
-    input_fasta = Path(args.input_fasta)
-    database_prefix = Path(args.database_prefix)
-    done_file = Path(args.done_file)
 
     write_file(
-        input_fasta,
-        ">reference\nATGCATGC\n",
+        reference_fasta,
+        ">reference\nATGC\n",
     )
-    make_database_files(database_prefix)
 
-    monkeypatch.setattr(
-        setup_blast_database,
-        "parse_args",
-        lambda: args,
+    assert (
+        setup_blast_database.validate_reference_fasta(
+            reference_fasta,
+            DummyLogger(),
+        )
+        is True
     )
-    monkeypatch.setattr(
-        setup_blast_database,
-        "make_logger",
-        lambda **kwargs: DummyLogger(),
+
+
+def test_ncbi_setup_skips_valid_database(
+    tmp_path,
+    monkeypatch,
+):
+    """Test existing valid NCBI database is reused."""
+    database_dir = tmp_path / "blast"
+    database_prefix = (
+        database_dir
+        / "refseq_genomic"
     )
+    done_file = tmp_path / "blast.done"
+
     monkeypatch.setattr(
         setup_blast_database,
         "validate_database",
         lambda prefix, logger: True,
     )
 
-    build_called = {"value": False}
+    called = {"download": False}
 
-    def fake_build_database(**kwargs):
-        build_called["value"] = True
+    def fake_download(**kwargs):
+        called["download"] = True
         return 0
 
     monkeypatch.setattr(
         setup_blast_database,
-        "build_database",
-        fake_build_database,
+        "download_ncbi_database",
+        fake_download,
     )
 
-    result = setup_blast_database.main()
+    result = setup_blast_database.setup_ncbi_database(
+        database_name="refseq_genomic",
+        database_prefix=database_prefix,
+        database_dir=database_dir,
+        overwrite=False,
+        metadata_file=tmp_path / "metadata.json",
+        done_file=done_file,
+        logger=DummyLogger(),
+    )
 
     assert result == 0
-    assert build_called["value"] is False
+    assert called["download"] is False
     assert done_file.exists()
 
 
-def test_main_rejects_partial_database_without_overwrite(
+def test_ncbi_setup_downloads_missing_database(
     tmp_path,
     monkeypatch,
 ):
-    """Test partial existing database requires overwrite."""
-    args = make_args(tmp_path)
-
-    input_fasta = Path(args.input_fasta)
-    database_prefix = Path(args.database_prefix)
-
-    write_file(
-        input_fasta,
-        ">reference\nATGCATGC\n",
-    )
-    write_file(Path(f"{database_prefix}.nhr"))
+    """Test absent NCBI database is downloaded."""
+    validation_results = iter([
+        False,
+        True,
+    ])
 
     monkeypatch.setattr(
         setup_blast_database,
-        "parse_args",
-        lambda: args,
+        "validate_database",
+        lambda prefix, logger: next(
+            validation_results
+        ),
     )
     monkeypatch.setattr(
         setup_blast_database,
-        "make_logger",
-        lambda **kwargs: DummyLogger(),
+        "download_ncbi_database",
+        lambda **kwargs: 0,
     )
 
-    assert setup_blast_database.main() == 1
+    database_dir = tmp_path / "blast"
+    database_prefix = (
+        database_dir
+        / "refseq_genomic"
+    )
+    metadata_file = tmp_path / "metadata.json"
+    done_file = tmp_path / "blast.done"
+
+    result = setup_blast_database.setup_ncbi_database(
+        database_name="refseq_genomic",
+        database_prefix=database_prefix,
+        database_dir=database_dir,
+        overwrite=False,
+        metadata_file=metadata_file,
+        done_file=done_file,
+        logger=DummyLogger(),
+    )
+
+    assert result == 0
+    assert metadata_file.exists()
+    assert done_file.exists()
+
+    metadata = json.loads(
+        metadata_file.read_text(
+            encoding="utf-8",
+        )
+    )
+
+    assert metadata["database_source"] == "ncbi"
+    assert metadata["database_name"] == "refseq_genomic"
 
 
-def test_main_returns_makeblastdb_failure_code(
+def test_fasta_setup_builds_missing_database(
     tmp_path,
     monkeypatch,
 ):
-    """Test setup returns makeblastdb's failure code."""
-    args = make_args(tmp_path)
-    input_fasta = Path(args.input_fasta)
-
+    """Test custom FASTA source builds a database."""
+    reference_fasta = (
+        tmp_path
+        / "references.fasta"
+    )
     write_file(
-        input_fasta,
-        ">reference\nATGCATGC\n",
+        reference_fasta,
+        ">reference\nATGC\n",
     )
+
+    validation_results = iter([
+        False,
+        True,
+    ])
 
     monkeypatch.setattr(
         setup_blast_database,
-        "parse_args",
-        lambda: args,
+        "validate_database",
+        lambda prefix, logger: next(
+            validation_results
+        ),
     )
     monkeypatch.setattr(
         setup_blast_database,
-        "make_logger",
-        lambda **kwargs: DummyLogger(),
-    )
-    monkeypatch.setattr(
-        setup_blast_database,
-        "build_database",
-        lambda **kwargs: 2,
+        "build_fasta_database",
+        lambda **kwargs: 0,
     )
 
-    assert setup_blast_database.main() == 2
+    metadata_file = tmp_path / "metadata.json"
+    done_file = tmp_path / "blast.done"
+
+    result = setup_blast_database.setup_fasta_database(
+        reference_fasta=reference_fasta,
+        database_prefix=(
+            tmp_path
+            / "blast"
+            / "fish_mitogenomes"
+        ),
+        database_title="Fish mitochondrial genomes",
+        parse_seqids=True,
+        overwrite=False,
+        metadata_file=metadata_file,
+        done_file=done_file,
+        logger=DummyLogger(),
+    )
+
+    assert result == 0
+    assert metadata_file.exists()
+    assert done_file.exists()
