@@ -54,7 +54,7 @@ def enabled_targets() -> list:
         )
     if stage_enabled("phylogeny"):
         targets.extend(
-            expand(str(JOB_DIR / "phylogeny" / "{sample}.phylogeny.done"), sample=SAMPLES)
+            expand(str(JOB_DIR / "phylogeny" / "blast" / "{sample}.blast.done"), sample=SAMPLES)
         )
     if stage_enabled("reporting"):
         targets.extend(
@@ -89,7 +89,9 @@ if stage_enabled("annotation"):
     include: "rules/annotation.smk"
     
 if stage_enabled("phylogeny"):
-    include: "rules/phylogeny.smk"
+    if config["tools"]["blast"].get("initialize_database", True):
+        include: "rules/blast_config.smk"
+    include: "rules/blast.smk"
 
 if stage_enabled("reporting"):
     include: "rules/reporting.smk"

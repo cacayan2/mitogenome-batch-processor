@@ -1,0 +1,39 @@
+output_root: tests/fixtures/outputs
+job_id: test_job
+
+manifest: tests/fixtures/manifests/valid_minimal.tsv
+
+stages:
+  qc_raw: false
+  trimming: false
+  qc_trimmed: false
+  assembly: false
+  annotation: false
+  phylogeny: true
+  reporting: false
+
+tools:
+  blast:
+    initialize_database: true
+
+    reference_fasta: tests/fixtures/blast/reference_mitogenomes.fasta
+    database: tests/fixtures/blast/database/test_mito
+    database_title: MitoPipeline BLAST integration test database
+
+    parse_seqids: false
+    overwrite_database: false
+
+    threads: 4
+    task: blastn
+    evalue: 1.0e-5
+    max_target_seqs: 10
+    max_hsps: 1
+
+    perc_identity: null
+    query_coverage: null
+    word_size: null
+
+    output_format: >-
+      6 qseqid sseqid pident length mismatch gapopen
+      qstart qend sstart send evalue bitscore qcovs
+      staxids sscinames stitle
