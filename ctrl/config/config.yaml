@@ -101,9 +101,10 @@ tools:
     perc_identity: null # Percentage identity threshold
     query_coverage: null # Query coverage threshold
     word_size: null # Word size for BLAST
+    entrez_email: ecacayan@luc.edu # Email required for NCBI Entrez retrieval
+    entrez_api_key: null # Optional NCBI API key
     output_format: >-
       6 qseqid sseqid pident length mismatch gapopen
       qstart qend sstart send evalue bitscore qcovs
       staxids sscinames stitle
-    # Output format for BLAST
   
