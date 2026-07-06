@@ -4,8 +4,11 @@ This file contains the rule for running the overall Snakemake orchestration.
 """
 
 # Imports
-import pandas as pd
 from pathlib import Path
+
+from mitopipeline.config.runtime_manifest import (
+    prepare_runtime_manifest,
+)
 
 # Reads the configuration file and specifies appropriate directories.
 OUTPUT_ROOT = Path(config["output_root"])
@@ -15,9 +18,27 @@ JOB_DIR = OUTPUT_ROOT / JOB_ID
 # Obtaining the stages from the configuration file.
 STAGES = config.get("stages", {})
 
-# Reading the runtime sample manifest.
-MANIFEST_PATH = Path(config["manifest"])
-SAMPLE_TABLE = pd.read_csv(MANIFEST_PATH, sep="\t").set_index("sample_id")
+# Preparing the normalized runtime sample manifest.
+RUNTIME_MANIFEST_PATH = (
+    JOB_DIR
+    / "metadata"
+    / "runtime_manifest.tsv"
+)
+
+SAMPLE_TABLE = prepare_runtime_manifest(
+    output_path=RUNTIME_MANIFEST_PATH,
+    source_manifest=config.get(
+        "manifest"
+    ),
+    input_directory=config.get(
+        "input_directory"
+    ),
+    validate_files=config.get(
+        "validate_input_files",
+        True,
+    ),
+)
+
 SAMPLES = SAMPLE_TABLE.index.tolist()
 
 

@@ -1,9 +1,8 @@
-output_root: null # Always have this!!!
-# N.B. - Either one of manifest or input_directory must be null - if both are provided, source manifest will be used instead of construction of an input_directory-based manifest.
-manifest: null # Keep null if you don't have a manifest, otherwise provide a path. 
-input_directory: null # Keep null if you have a manifest, otherwise provide a path. 
-job_id: null # Keep null if you want to start a new job, otherwise provide one if you want to pick up from a previously started job.
-validate_input_files: true # Whether to validate input files.
+output_root: tests/fixtures/outputs
+manifest: null
+job_id: test_job
+input_directory: tests/fixtures/manifest_free_reads
+validate_input_files: true
 
 stages: # Select which stages to run (true/false) - mostly for debugging purposes.
   qc_raw: true 
@@ -12,8 +11,7 @@ stages: # Select which stages to run (true/false) - mostly for debugging purpose
   assembly: true
   annotation: true
   phylogeny: true
-  reporting: true
-
+  reporting: false
 tools:
   fastp: # Options for fastp.
     threads: 4 # Number of threads to use for fastp.
