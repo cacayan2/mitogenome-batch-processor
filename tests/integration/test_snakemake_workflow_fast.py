@@ -42,6 +42,9 @@ def test_snakemake_dry_run():
         assert "rule blast" in result.stdout
         assert "rule select_blast_hits" in result.stdout
         assert "rule generate_alignment_dataset" in result.stdout
+        assert "rule align_phylogeny_dataset" in result.stdout
+        assert "rule infer_phylogeny" in result.stdout
+        assert "rule render_phylogenetic_tree" in result.stdout
 
     finally:
         # Cleanup.

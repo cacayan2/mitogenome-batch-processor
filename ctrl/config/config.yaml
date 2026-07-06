@@ -107,4 +107,17 @@ tools:
       6 qseqid sseqid pident length mismatch gapopen
       qstart qend sstart send evalue bitscore qcovs
       staxids sscinames stitle
-  
+  alignment: # Options for alignment
+    executable: mafft # Name of executable
+    threads: 4 # Number of threads to use for MAFFT
+    strategy: auto # MAFFT alignment strategy
+  iqtree: # Options for IQ-TREE
+    executable: iqtree3 # Name of IQ-TREE executable
+    threads: 4 # Number of threads to use for IQ-TREE
+    sequence_type: DNA # Sequence type for IQ-TREE
+    model: MFP # Model for IQ-TREE
+    ultrafast_bootstrap: 1000 # Number of ultrafast bootstraps for IQ-TREE
+    sh_alrt: 1000 # Number of SH ALRTs for IQ-TREE
+    random_seed: 12345 # Random seed for IQ-TREE
+    render_dpi: 600 # DPI for IQ-TREE render
+    midpoint_root_figure: true # Whether to use midpoint root for IQ-TREE render

@@ -54,7 +54,7 @@ def enabled_targets() -> list:
         )
     if stage_enabled("phylogeny"):
         targets.extend(
-            expand(str(JOB_DIR / "phylogeny" / "datasets" / "{sample}.phylogeny.done"), sample=SAMPLES)
+            expand(str(JOB_DIR / "phylogeny" / "figures" / "{sample}.phylogeny.done"), sample=SAMPLES)
         )
     if stage_enabled("reporting"):
         targets.extend(
@@ -93,6 +93,7 @@ if stage_enabled("phylogeny"):
     include: "rules/blast.smk"
     include: "rules/blast_hits.smk"
     include: "rules/alignment_dataset.smk"
+    include: "rules/phylogeny.smk"
 
 if stage_enabled("reporting"):
     include: "rules/reporting.smk"
