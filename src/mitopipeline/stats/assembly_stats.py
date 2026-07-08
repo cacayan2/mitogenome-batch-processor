@@ -118,7 +118,7 @@ def parse_assembly_stats(
     if logger is not None: logger.info(f"Parsing assembly stats for sample {sample_id}.")
 
     # Verifying the fasta path exists.
-    if not fasta_path.exists() and fasta_path.is_file():
+    if not fasta_path.exists() or not fasta_path.is_file():
         if logger is not None: logger.error(f"FASTA file not found: {fasta_path}")
         raise FileNotFoundError(f"FASTA file not found: {fasta_path}")
     

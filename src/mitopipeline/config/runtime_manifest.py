@@ -2,13 +2,17 @@
 
 Create a normalized runtime sample manifest from either a user-provided
 manifest or a directory containing paired-end FASTQ files.
+
+The input directory is always required. When a source manifest is supplied,
+FASTQ entries are interpreted as filenames located inside the input directory.
+When no source manifest is supplied, FASTQ files are discovered directly from
+the input directory.
 """
 
 # Imports
 import logging
 import re
 from pathlib import Path
-from typing import Iterable
 
 import pandas as pd
 
@@ -26,31 +30,53 @@ FASTQ_SUFFIXES = (
     ".fq.gz",
 )
 
+MANIFEST_COLUMN_ALIASES = {
+    "run": "run",
+    "sample_number": "sample_number",
+    "sample_no": "sample_number",
+    "sample_num": "sample_number",
+    "genus": "genus",
+    "species": "species",
+    "subspecies": "subspecies",
+    "museum": "museum",
+    "mus_id": "mus_id",
+    "museum_id": "mus_id",
+    "tube_id": "tube_id",
+    "conc_ng_ul": "conc_ng_ul",
+    "concentration": "conc_ng_ul",
+    "fastq_name_r1_r2": "fastq_filename",
+    "fastq_filename": "fastq_filename",
+    "filename": "fastq_filename",
+    "file_name": "fastq_filename",
+    "sample_id": "sample_id",
+    "r1": "r1",
+    "r2": "r2",
+}
+
+DISCARDED_MANIFEST_COLUMNS = {
+    "sample_number",
+    "dups",
+    "gc",
+    "median_len",
+    "seqs",
+}
+
 PAIR_PATTERNS = (
     re.compile(
-        r"^(?P<sample>.+?)(?:_R)(?P<read>[12])"
-        r"(?:_\d+)?\.(?:fastq|fq)(?:\.gz)?$",
+        r"^(?P<sample>.+?)_R(?P<read>[12])"
+        r"(?:_\d+)?(?:\.(?:fastq|fq)(?:\.gz)?)?$",
         flags=re.IGNORECASE,
     ),
     re.compile(
         r"^(?P<sample>.+?)[._-](?P<read>[12])"
-        r"\.(?:fastq|fq)(?:\.gz)?$",
+        r"(?:\.(?:fastq|fq)(?:\.gz)?)?$",
         flags=re.IGNORECASE,
     ),
 )
 
 
-def is_fastq_path(
-        path: str | Path,
-) -> bool:
-    """Return whether a path has a supported FASTQ suffix.
-
-    Args:
-        path (str | Path): Path to inspect.
-
-    Returns:
-        bool: True when the path looks like a FASTQ file.
-    """
+def is_fastq_path(path: str | Path) -> bool:
+    """Return whether a path has a supported FASTQ suffix."""
     name = Path(path).name.lower()
 
     return any(
@@ -70,15 +96,10 @@ def parse_fastq_filename(
         sample_R2.fastq.gz
         sample_R1_001.fastq.gz
         sample_R2_001.fastq.gz
+        sample_R1_001
+        sample_R2_001
         sample_1.fq.gz
         sample_2.fq.gz
-
-    Args:
-        path (str | Path): FASTQ path.
-
-    Returns:
-        tuple[str, int] | None: Sample ID and read number, or None when
-            the filename does not match a supported pairing convention.
     """
     filename = Path(path).name
 
@@ -88,13 +109,8 @@ def parse_fastq_filename(
         if match is None:
             continue
 
-        sample_id = match.group("sample").strip(
-            "._-"
-        )
-
-        read_number = int(
-            match.group("read")
-        )
+        sample_id = match.group("sample").strip("._-")
+        read_number = int(match.group("read"))
 
         if not sample_id:
             return None
@@ -104,20 +120,8 @@ def parse_fastq_filename(
     return None
 
 
-def normalize_sample_id(
-        sample_id: object,
-) -> str:
-    """Normalize and validate a sample identifier.
-
-    Args:
-        sample_id (object): Sample identifier value.
-
-    Returns:
-        str: Normalized sample ID.
-
-    Raises:
-        ValueError: If the sample ID is empty.
-    """
+def normalize_sample_id(sample_id: object) -> str:
+    """Normalize and validate a sample identifier."""
     normalized = str(sample_id).strip()
 
     if not normalized:
@@ -128,40 +132,102 @@ def normalize_sample_id(
     return normalized
 
 
-def resolve_manifest_path(
-        value: object,
-        manifest_directory: Path,
-) -> Path:
-    """Resolve a manifest file path.
+def normalize_metadata_value(value: object) -> str:
+    """Normalize an optional source-manifest metadata value."""
+    normalized = str(value).strip()
 
-    Relative paths are interpreted relative to the source manifest.
+    if normalized.lower() in {
+        "",
+        "nan",
+        "none",
+        "null",
+    }:
+        return ""
 
-    Args:
-        value (object): Manifest path value.
-        manifest_directory (Path): Source manifest directory.
+    return normalized
 
-    Returns:
-        Path: Absolute resolved path.
 
-    Raises:
-        ValueError: If the path is empty.
-    """
-    raw_value = str(value).strip()
+def normalize_column_name(column_name: object) -> str:
+    """Normalize a source-manifest column name."""
+    normalized = str(column_name).strip().lower()
 
-    if not raw_value:
+    normalized = re.sub(
+        r"[^a-z0-9]+",
+        "_",
+        normalized,
+    ).strip("_")
+
+    return MANIFEST_COLUMN_ALIASES.get(
+        normalized,
+        normalized,
+    )
+
+
+def normalize_source_columns(
+        table: pd.DataFrame,
+) -> pd.DataFrame:
+    """Normalize source-manifest columns and remove ignored QC fields."""
+    table = table.copy()
+
+    normalized_columns = [
+        normalize_column_name(column)
+        for column in table.columns
+    ]
+
+    duplicate_columns = sorted(
+        {
+            column
+            for column in normalized_columns
+            if normalized_columns.count(column) > 1
+        }
+    )
+
+    if duplicate_columns:
         raise ValueError(
-            "Manifest FASTQ paths cannot be empty."
+            "Source manifest contains columns that normalize "
+            "to duplicate names: "
+            + ", ".join(duplicate_columns)
+            + "."
         )
 
-    path = Path(raw_value).expanduser()
+    table.columns = normalized_columns
 
-    if not path.is_absolute():
-        path = (
-            manifest_directory
-            / path
+    columns_to_drop = [
+        column
+        for column in table.columns
+        if column in DISCARDED_MANIFEST_COLUMNS
+    ]
+
+    return table.drop(
+        columns=columns_to_drop,
+        errors="ignore",
+    )
+
+
+def validate_input_directory(
+        input_directory: str | Path | None,
+) -> Path:
+    """Validate and resolve the required FASTQ input directory."""
+    if input_directory is None or not str(input_directory).strip():
+        raise ValueError(
+            "'input_directory' is required."
         )
 
-    return path.resolve()
+    resolved = Path(
+        input_directory
+    ).expanduser().resolve()
+
+    if not resolved.exists():
+        raise FileNotFoundError(
+            f"Input directory not found: {resolved}."
+        )
+
+    if not resolved.is_dir():
+        raise ValueError(
+            f"Input path is not a directory: {resolved}."
+        )
+
+    return resolved
 
 
 def validate_fastq_file(
@@ -169,17 +235,7 @@ def validate_fastq_file(
         column_name: str,
         sample_id: str,
 ) -> None:
-    """Validate a FASTQ file path.
-
-    Args:
-        path (str | Path): FASTQ path.
-        column_name (str): Manifest column name.
-        sample_id (str): Sample identifier.
-
-    Raises:
-        FileNotFoundError: If the path does not exist.
-        ValueError: If the path is not a supported FASTQ file.
-    """
+    """Validate a resolved FASTQ file."""
     path = Path(path)
 
     if not path.exists():
@@ -204,14 +260,7 @@ def validate_fastq_file(
 def validate_manifest_columns(
         table: pd.DataFrame,
 ) -> None:
-    """Validate required runtime-manifest columns.
-
-    Args:
-        table (pd.DataFrame): Manifest table.
-
-    Raises:
-        ValueError: If required columns are missing.
-    """
+    """Validate required runtime-manifest columns."""
     missing_columns = [
         column
         for column in REQUIRED_COLUMNS
@@ -226,38 +275,152 @@ def validate_manifest_columns(
         )
 
 
-def normalize_manifest_table(
+def supported_fastq_names(
+        supplied_name: str,
+) -> list[str]:
+    """Return candidate FASTQ filenames for a manifest value."""
+    supplied_name = supplied_name.strip()
+
+    if not supplied_name:
+        raise ValueError(
+            "FASTQ filename cannot be empty."
+        )
+
+    if is_fastq_path(supplied_name):
+        return [
+            supplied_name,
+        ]
+
+    return [
+        supplied_name + suffix
+        for suffix in FASTQ_SUFFIXES
+    ]
+
+
+def resolve_input_filename(
+        filename: object,
+        input_directory: str | Path,
+        require_exists: bool = True,
+) -> Path:
+    """Resolve a filename against the configured input directory.
+
+    Source manifests must contain filenames only. Directory components and
+    absolute paths are rejected.
+    """
+    raw_filename = str(filename).strip()
+
+    if not raw_filename:
+        raise ValueError(
+            "Manifest FASTQ filename cannot be empty."
+        )
+
+    supplied_path = Path(raw_filename)
+
+    if supplied_path.is_absolute():
+        raise ValueError(
+            "Source manifests must contain FASTQ filenames, "
+            f"not absolute paths: {raw_filename}."
+        )
+
+    if supplied_path.parent != Path("."):
+        raise ValueError(
+            "Source manifests must contain FASTQ filenames only, "
+            f"not relative paths: {raw_filename}."
+        )
+
+    input_directory = Path(input_directory).expanduser().resolve()
+
+    candidates = [
+        input_directory / candidate_name
+        for candidate_name in supported_fastq_names(
+            raw_filename
+        )
+    ]
+
+    matching_paths = [
+        candidate.resolve()
+        for candidate in candidates
+        if candidate.exists()
+        and candidate.is_file()
+    ]
+
+    if len(matching_paths) == 1:
+        return matching_paths[0]
+
+    if len(matching_paths) > 1:
+        raise ValueError(
+            f"FASTQ filename {raw_filename} matched multiple files: "
+            + ", ".join(
+                str(path)
+                for path in matching_paths
+            )
+            + "."
+        )
+
+    if not require_exists:
+        return candidates[0].resolve()
+
+    raise FileNotFoundError(
+        f"FASTQ file {raw_filename} was not found under "
+        f"{input_directory}. Tried: "
+        + ", ".join(
+            path.name
+            for path in candidates
+        )
+        + "."
+    )
+
+
+def read_source_manifest(
+        manifest_path: str | Path,
+) -> pd.DataFrame:
+    """Read an Excel, TSV, TXT, or CSV source manifest."""
+    manifest_path = Path(manifest_path)
+    suffix = manifest_path.suffix.lower()
+
+    if suffix in {
+        ".xlsx",
+        ".xlsm",
+    }:
+        return pd.read_excel(
+            manifest_path,
+            dtype=str,
+            keep_default_na=False,
+        )
+
+    if suffix in {
+        ".tsv",
+        ".txt",
+    }:
+        return pd.read_csv(
+            manifest_path,
+            sep="\t",
+            dtype=str,
+            keep_default_na=False,
+        )
+
+    if suffix == ".csv":
+        return pd.read_csv(
+            manifest_path,
+            dtype=str,
+            keep_default_na=False,
+        )
+
+    raise ValueError(
+        "Unsupported manifest format. Expected one of: "
+        ".xlsx, .xlsm, .tsv, .txt, or .csv."
+    )
+
+
+def normalize_runtime_table(
         table: pd.DataFrame,
-        manifest_directory: str | Path,
         validate_files: bool = True,
         logger: logging.Logger | None = None,
 ) -> pd.DataFrame:
-    """Normalize a manifest DataFrame.
-
-    Args:
-        table (pd.DataFrame): Source manifest table.
-        manifest_directory (str | Path): Directory used to resolve
-            relative FASTQ paths.
-        validate_files (bool, optional): Whether FASTQ files must exist.
-            Defaults to True.
-        logger (logging.Logger | None, optional): Logger. Defaults to
-            None.
-
-    Returns:
-        pd.DataFrame: Normalized manifest table.
-
-    Raises:
-        ValueError: If records are invalid.
-    """
-    manifest_directory = Path(
-        manifest_directory
-    ).resolve()
-
+    """Validate and normalize a one-row-per-sample runtime table."""
     table = table.copy()
 
-    validate_manifest_columns(
-        table
-    )
+    validate_manifest_columns(table)
 
     if table.empty:
         raise ValueError(
@@ -266,9 +429,7 @@ def normalize_manifest_table(
 
     table["sample_id"] = table[
         "sample_id"
-    ].map(
-        normalize_sample_id
-    )
+    ].map(normalize_sample_id)
 
     if table["sample_id"].duplicated().any():
         duplicates = sorted(
@@ -294,28 +455,21 @@ def normalize_manifest_table(
             column_name
         ].map(
             lambda value: str(
-                resolve_manifest_path(
-                    value=value,
-                    manifest_directory=manifest_directory,
-                )
+                Path(value).expanduser().resolve()
             )
         )
 
-    duplicate_r1 = table["r1"].duplicated(
-        keep=False
-    )
-
-    if duplicate_r1.any():
+    if table["r1"].duplicated(
+            keep=False
+    ).any():
         raise ValueError(
             "One or more R1 FASTQ files are assigned to "
             "multiple samples."
         )
 
-    duplicate_r2 = table["r2"].duplicated(
-        keep=False
-    )
-
-    if duplicate_r2.any():
+    if table["r2"].duplicated(
+            keep=False
+    ).any():
         raise ValueError(
             "One or more R2 FASTQ files are assigned to "
             "multiple samples."
@@ -351,7 +505,6 @@ def normalize_manifest_table(
                 sample_id=row.sample_id,
             )
 
-    # Keep the required columns first while preserving optional metadata.
     optional_columns = [
         column
         for column in table.columns
@@ -379,29 +532,246 @@ def normalize_manifest_table(
     return table
 
 
-def load_source_manifest(
-        manifest_path: str | Path,
+def parse_manifest_fastq_name(
+        filename: object,
+) -> tuple[str, int]:
+    """Extract a sample ID and read number from a manifest filename."""
+    raw_filename = str(filename).strip()
+    parsed = parse_fastq_filename(raw_filename)
+
+    if parsed is None:
+        raise ValueError(
+            "Could not determine R1/R2 pairing from manifest "
+            f"filename: {raw_filename}."
+        )
+
+    return parsed
+
+
+def combine_pair_metadata(
+        sample_id: str,
+        rows: pd.DataFrame,
+        metadata_columns: list[str],
+) -> dict[str, str]:
+    """Combine metadata shared by an R1/R2 pair."""
+    metadata: dict[str, str] = {}
+
+    for column in metadata_columns:
+        values = {
+            normalize_metadata_value(value)
+            for value in rows[column].tolist()
+        }
+
+        values.discard("")
+
+        if len(values) > 1:
+            raise ValueError(
+                f"Conflicting {column} values for paired sample "
+                f"{sample_id}: {sorted(values)}."
+            )
+
+        metadata[column] = (
+            next(iter(values))
+            if values
+            else ""
+        )
+
+    return metadata
+
+
+def convert_row_per_sample_manifest(
+        table: pd.DataFrame,
+        input_directory: str | Path,
         validate_files: bool = True,
         logger: logging.Logger | None = None,
 ) -> pd.DataFrame:
-    """Load and normalize a user-provided manifest.
+    """Normalize a conventional one-row-per-sample manifest."""
+    required_source_columns = {
+        "sample_id",
+        "r1",
+        "r2",
+    }
 
-    Args:
-        manifest_path (str | Path): Source TSV manifest.
-        validate_files (bool, optional): Whether FASTQ files must exist.
-            Defaults to True.
-        logger (logging.Logger | None, optional): Logger. Defaults to
-            None.
+    missing_columns = (
+        required_source_columns
+        - set(table.columns)
+    )
 
-    Returns:
-        pd.DataFrame: Normalized manifest.
+    if missing_columns:
+        raise ValueError(
+            "One-row-per-sample manifest is missing columns: "
+            + ", ".join(
+                sorted(missing_columns)
+            )
+            + "."
+        )
 
-    Raises:
-        FileNotFoundError: If the manifest does not exist.
+    table = table.copy()
+
+    table["r1"] = table[
+        "r1"
+    ].map(
+        lambda filename: str(
+            resolve_input_filename(
+                filename=filename,
+                input_directory=input_directory,
+                require_exists=validate_files,
+            )
+        )
+    )
+
+    table["r2"] = table[
+        "r2"
+    ].map(
+        lambda filename: str(
+            resolve_input_filename(
+                filename=filename,
+                input_directory=input_directory,
+                require_exists=validate_files,
+            )
+        )
+    )
+
+    return normalize_runtime_table(
+        table=table,
+        validate_files=validate_files,
+        logger=logger,
+    )
+
+
+def convert_row_per_read_manifest(
+        table: pd.DataFrame,
+        input_directory: str | Path,
+        validate_files: bool = True,
+        logger: logging.Logger | None = None,
+) -> pd.DataFrame:
+    """Convert a one-row-per-read manifest into one row per sample."""
+    if "fastq_filename" not in table.columns:
+        raise ValueError(
+            "Row-per-read manifest must contain a FASTQ filename "
+            "column such as 'Fastq_name_R1_R2'."
+        )
+
+    table = table.copy()
+
+    parsed_values = table[
+        "fastq_filename"
+    ].map(parse_manifest_fastq_name)
+
+    table["sample_id"] = [
+        sample_id
+        for sample_id, _ in parsed_values
+    ]
+
+    table["read_number"] = [
+        read_number
+        for _, read_number in parsed_values
+    ]
+
+    metadata_columns = [
+        column
+        for column in table.columns
+        if column not in {
+            "sample_id",
+            "read_number",
+            "fastq_filename",
+            "r1",
+            "r2",
+        }
+    ]
+
+    records: list[dict[str, str]] = []
+
+    for sample_id, sample_rows in table.groupby(
+            "sample_id",
+            sort=True,
+    ):
+        r1_rows = sample_rows.loc[
+            sample_rows["read_number"] == 1
+        ]
+
+        r2_rows = sample_rows.loc[
+            sample_rows["read_number"] == 2
+        ]
+
+        if len(r1_rows) != 1:
+            raise ValueError(
+                f"Sample {sample_id} must contain exactly one R1 "
+                f"row; found {len(r1_rows)}."
+            )
+
+        if len(r2_rows) != 1:
+            raise ValueError(
+                f"Sample {sample_id} must contain exactly one R2 "
+                f"row; found {len(r2_rows)}."
+            )
+
+        r1_name = r1_rows.iloc[0][
+            "fastq_filename"
+        ]
+
+        r2_name = r2_rows.iloc[0][
+            "fastq_filename"
+        ]
+
+        r1_path = resolve_input_filename(
+            filename=r1_name,
+            input_directory=input_directory,
+            require_exists=validate_files,
+        )
+
+        r2_path = resolve_input_filename(
+            filename=r2_name,
+            input_directory=input_directory,
+            require_exists=validate_files,
+        )
+
+        metadata = combine_pair_metadata(
+            sample_id=sample_id,
+            rows=sample_rows,
+            metadata_columns=metadata_columns,
+        )
+
+        records.append(
+            {
+                "sample_id": sample_id,
+                "r1": str(r1_path),
+                "r2": str(r2_path),
+                **metadata,
+            }
+        )
+
+    normalized = pd.DataFrame.from_records(
+        records
+    )
+
+    return normalize_runtime_table(
+        table=normalized,
+        validate_files=validate_files,
+        logger=logger,
+    )
+
+
+def load_source_manifest(
+        manifest_path: str | Path,
+        input_directory: str | Path,
+        validate_files: bool = True,
+        logger: logging.Logger | None = None,
+) -> pd.DataFrame:
+    """Load and normalize a user-provided source manifest.
+
+    Supported layouts:
+
+    1. One row per sample with sample_id, r1, and r2.
+    2. One row per read with Fastq_name_R1_R2 or an accepted alias.
     """
     manifest_path = Path(
         manifest_path
     ).expanduser().resolve()
+
+    input_directory = validate_input_directory(
+        input_directory
+    )
 
     if not manifest_path.exists():
         raise FileNotFoundError(
@@ -414,19 +784,42 @@ def load_source_manifest(
             f"{manifest_path}."
         )
 
-    table = pd.read_csv(
-        manifest_path,
-        sep="\t",
-        dtype=str,
-        keep_default_na=False,
+    table = read_source_manifest(
+        manifest_path
     )
 
-    normalized = normalize_manifest_table(
-        table=table,
-        manifest_directory=manifest_path.parent,
-        validate_files=validate_files,
-        logger=logger,
+    table = normalize_source_columns(
+        table
     )
+
+    if {
+        "sample_id",
+        "r1",
+        "r2",
+    }.issubset(
+        table.columns
+    ):
+        normalized = convert_row_per_sample_manifest(
+            table=table,
+            input_directory=input_directory,
+            validate_files=validate_files,
+            logger=logger,
+        )
+
+    elif "fastq_filename" in table.columns:
+        normalized = convert_row_per_read_manifest(
+            table=table,
+            input_directory=input_directory,
+            validate_files=validate_files,
+            logger=logger,
+        )
+
+    else:
+        raise ValueError(
+            "Source manifest must contain either "
+            "'sample_id', 'r1', and 'r2', or a filename column "
+            "such as 'Fastq_name_R1_R2'."
+        )
 
     if logger is not None:
         logger.info(
@@ -439,32 +832,10 @@ def load_source_manifest(
 def discover_fastq_files(
         input_directory: str | Path,
 ) -> list[Path]:
-    """Recursively discover supported FASTQ files.
-
-    Args:
-        input_directory (str | Path): Input dataset directory.
-
-    Returns:
-        list[Path]: Sorted FASTQ paths.
-
-    Raises:
-        FileNotFoundError: If the input directory does not exist.
-        ValueError: If the path is not a directory.
-    """
-    input_directory = Path(
+    """Recursively discover supported FASTQ files."""
+    input_directory = validate_input_directory(
         input_directory
-    ).expanduser().resolve()
-
-    if not input_directory.exists():
-        raise FileNotFoundError(
-            f"Input directory not found: {input_directory}."
-        )
-
-    if not input_directory.is_dir():
-        raise ValueError(
-            f"Input path is not a directory: "
-            f"{input_directory}."
-        )
+    )
 
     return sorted(
         path.resolve()
@@ -478,19 +849,7 @@ def construct_manifest_from_directory(
         input_directory: str | Path,
         logger: logging.Logger | None = None,
 ) -> pd.DataFrame:
-    """Construct a minimal manifest from paired FASTQ files.
-
-    Args:
-        input_directory (str | Path): Dataset root directory.
-        logger (logging.Logger | None, optional): Logger. Defaults to
-            None.
-
-    Returns:
-        pd.DataFrame: Minimal normalized runtime manifest.
-
-    Raises:
-        ValueError: If files cannot be paired unambiguously.
-    """
+    """Construct a minimal runtime manifest from paired FASTQ files."""
     fastq_paths = discover_fastq_files(
         input_directory
     )
@@ -567,12 +926,8 @@ def construct_manifest_from_directory(
             records.append(
                 {
                     "sample_id": sample_id,
-                    "r1": str(
-                        r1_candidates[0]
-                    ),
-                    "r2": str(
-                        r2_candidates[0]
-                    ),
+                    "r1": str(r1_candidates[0]),
+                    "r2": str(r2_candidates[0]),
                 }
             )
 
@@ -587,11 +942,8 @@ def construct_manifest_from_directory(
         columns=REQUIRED_COLUMNS,
     )
 
-    normalized = normalize_manifest_table(
+    normalized = normalize_runtime_table(
         table=table,
-        manifest_directory=Path(
-            input_directory
-        ),
         validate_files=True,
         logger=logger,
     )
@@ -616,17 +968,7 @@ def write_runtime_manifest(
         output_path: str | Path,
         logger: logging.Logger | None = None,
 ) -> Path:
-    """Write a normalized runtime manifest.
-
-    Args:
-        table (pd.DataFrame): Normalized manifest table.
-        output_path (str | Path): Runtime manifest output path.
-        logger (logging.Logger | None, optional): Logger. Defaults to
-            None.
-
-    Returns:
-        Path: Absolute runtime-manifest path.
-    """
+    """Write a normalized runtime manifest atomically."""
     output_path = Path(
         output_path
     ).expanduser().resolve()
@@ -661,63 +1003,38 @@ def write_runtime_manifest(
 
 def prepare_runtime_manifest(
         output_path: str | Path,
+        input_directory: str | Path | None,
         source_manifest: str | Path | None = None,
-        input_directory: str | Path | None = None,
         validate_files: bool = True,
         logger: logging.Logger | None = None,
 ) -> pd.DataFrame:
-    """Create the runtime manifest used by the workflow.
-
-    A source manifest takes precedence when both input sources are given.
-
-    Args:
-        output_path (str | Path): Runtime manifest destination.
-        source_manifest (str | Path | None, optional): User manifest.
-        input_directory (str | Path | None, optional): FASTQ dataset
-            directory.
-        validate_files (bool, optional): Whether input files must exist.
-            Defaults to True.
-        logger (logging.Logger | None, optional): Logger. Defaults to
-            None.
-
-    Returns:
-        pd.DataFrame: Runtime manifest indexed by sample ID.
-
-    Raises:
-        ValueError: If neither input source is configured.
-    """
-    has_manifest = (
-        source_manifest is not None
-        and str(source_manifest).strip()
+    """Create the authoritative runtime manifest used by Snakemake."""
+    input_directory = validate_input_directory(
+        input_directory
     )
 
-    has_input_directory = (
-        input_directory is not None
-        and str(input_directory).strip()
+    has_manifest = (
+        source_manifest is not None
+        and bool(str(source_manifest).strip())
     )
 
     if has_manifest:
         table = load_source_manifest(
             manifest_path=source_manifest,
+            input_directory=input_directory,
             validate_files=validate_files,
             logger=logger,
         )
 
         source_type = "source manifest"
 
-    elif has_input_directory:
+    else:
         table = construct_manifest_from_directory(
             input_directory=input_directory,
             logger=logger,
         )
 
         source_type = "FASTQ directory discovery"
-
-    else:
-        raise ValueError(
-            "Either 'manifest' or 'input_directory' must be "
-            "configured."
-        )
 
     runtime_path = write_runtime_manifest(
         table=table,

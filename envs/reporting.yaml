@@ -1,8 +1,12 @@
-name: mito-reporting
+name: mitopipeline-reporting
+
 channels:
   - conda-forge
+  - bioconda
+  - defaults
+
 dependencies:
-  - python
+  - python=3.12
+  - biopython
   - pandas
   - matplotlib
-  - pip

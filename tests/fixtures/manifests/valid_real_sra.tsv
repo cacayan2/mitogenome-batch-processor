@@ -1,7 +1,7 @@
 sample_id	r1	r2	genus	species	source
-lemon_shark_001	tests/fixtures/fastq_real/lemon_shark_001_R1.fastq.gz	tests/fixtures/fastq_real/lemon_shark_001_R2.fastq.gz	Negaprion	brevirostris	NCBI_SRA
-common_carp_001	tests/fixtures/fastq_real/common_carp_001_R1.fastq.gz	tests/fixtures/fastq_real/common_carp_001_R2.fastq.gz	Cyprinus	carpio	NCBI_SRA
-neolissochilus_001	tests/fixtures/fastq_real/neolissochilus_001_R1.fastq.gz	tests/fixtures/fastq_real/neolissochilus_001_R2.fastq.gz	Neolissochilus	stracheyi	NCBI_SRA
-korean_loach_001	tests/fixtures/fastq_real/korean_loach_001_R1.fastq.gz	tests/fixtures/fastq_real/korean_loach_001_R2.fastq.gz	Koreocobitis	naktongensis	NCBI_SRA
-sea_chub_001	tests/fixtures/fastq_real/sea_chub_001_R1.fastq.gz	tests/fixtures/fastq_real/sea_chub_001_R2.fastq.gz	Girella	nigricans	NCBI_SRA
-sea_chub_002	tests/fixtures/fastq_real/sea_chub_002_R1.fastq.gz	tests/fixtures/fastq_real/sea_chub_002_R2.fastq.gz	Kyphosus	azureus	NCBI_SRA
+lemon_shark_001	lemon_shark_001_R1.fastq.gz	lemon_shark_001_R2.fastq.gz	Negaprion	brevirostris	NCBI_SRA
+common_carp_001	common_carp_001_R1.fastq.gz	common_carp_001_R2.fastq.gz	Cyprinus	carpio	NCBI_SRA
+neolissochilus_001	neolissochilus_001_R1.fastq.gz	neolissochilus_001_R2.fastq.gz	Neolissochilus	stracheyi	NCBI_SRA
+korean_loach_001	korean_loach_001_R1.fastq.gz	korean_loach_001_R2.fastq.gz	Koreocobitis	naktongensis	NCBI_SRA
+sea_chub_001	sea_chub_001_R1.fastq.gz	sea_chub_001_R2.fastq.gz	Girella	nigricans	NCBI_SRA
+sea_chub_002	sea_chub_002_R1.fastq.gz	sea_chub_002_R2.fastq.gz	Kyphosus	azureus	NCBI_SRA

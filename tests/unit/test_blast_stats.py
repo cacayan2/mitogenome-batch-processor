@@ -15,6 +15,7 @@ from mitopipeline.stats.blast_stats import (
     rank_blast_matches,
     select_top_blast_matches,
     write_top_blast_matches,
+    parse_top_blast_matches,
 )
 
 
@@ -477,3 +478,35 @@ def test_write_top_blast_matches_writes_header_for_no_hits(tmp_path):
         *BLAST_COLUMNS,
     ]
     assert rows == []
+
+def test_parse_top_blast_matches(
+        tmp_path: Path,
+):
+    """Confirm ranked top hits are parsed."""
+    top_hits_path = (
+        tmp_path
+        / "sample.top_hits.tsv"
+    )
+
+    top_hits_path.write_text(
+        (
+            "sample_id\trank\tqseqid\tsseqid\tpident\t"
+            "length\tmismatch\tgapopen\tqstart\tqend\t"
+            "sstart\tsend\tevalue\tbitscore\tqcovs\t"
+            "staxids\tsscinames\tstitle\n"
+            "sample_001\t1\tquery\tNC_001.1\t99.5\t"
+            "16000\t10\t0\t1\t16000\t1\t16000\t"
+            "0.0\t30000\t100\t123\tSpecies one\t"
+            "Species one mitochondrion\n"
+        ),
+        encoding="utf-8",
+    )
+
+    matches = parse_top_blast_matches(
+        top_hits_path
+    )
+
+    assert len(matches) == 1
+    assert matches[0]["rank"] == 1
+    assert matches[0]["pident"] == 99.5
+    assert matches[0]["length"] == 16000

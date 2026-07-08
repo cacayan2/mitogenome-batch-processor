@@ -45,7 +45,8 @@ def test_snakemake_dry_run():
         assert "rule align_phylogeny_dataset" in result.stdout
         assert "rule infer_phylogeny" in result.stdout
         assert "rule render_phylogenetic_tree" in result.stdout
-
+        assert "rule reporting" in result.stdout
+        
     finally:
         # Cleanup.
         if output_dir.exists():

@@ -14,10 +14,16 @@ from mitopipeline.exec import (
 class FakeLogger:
     """Minimal logger for execution-layer tests."""
 
-    def info(self, message):
+    def info(
+            self,
+            message,
+    ):
         """Accept informational log messages."""
 
-    def exception(self, message):
+    def exception(
+            self,
+            message,
+    ):
         """Accept exception log messages."""
 
 
@@ -31,7 +37,10 @@ def test_main_success(
             tmp_path
             / "samples.tsv"
         ),
-        input_directory=None,
+        input_directory=str(
+            tmp_path
+            / "reads"
+        ),
         output=str(
             tmp_path
             / "runtime_manifest.tsv"
@@ -58,7 +67,11 @@ def test_main_success(
     )
 
     class FakeTable:
-        def __len__(self):
+        """Minimal table used by the test."""
+
+        def __len__(
+                self,
+        ):
             return 2
 
     def fake_prepare_runtime_manifest(
@@ -80,7 +93,9 @@ def test_main_success(
         arguments.manifest
     )
 
-    assert calls["kwargs"]["input_directory"] is None
+    assert calls["kwargs"]["input_directory"] == (
+        arguments.input_directory
+    )
 
 
 def test_main_failure(

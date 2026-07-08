@@ -10,33 +10,27 @@ from pathlib import Path
 from mitopipeline.config.runtime_manifest import (
     prepare_runtime_manifest,
 )
-from mitopipeline.logging.logger_factory import make_logger
+from mitopipeline.logging.logger_factory import (
+    make_logger,
+)
 
 
 def parse_args() -> argparse.Namespace:
-    """Parse command-line arguments.
-
-    Returns:
-        argparse.Namespace: Parsed arguments.
-    """
+    """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
         description=(
-            "Create a normalized runtime manifest from either a "
-            "source manifest or a paired-end FASTQ directory."
+            "Create a normalized runtime manifest from a required "
+            "FASTQ directory and an optional metadata manifest."
         )
     )
 
-    source_group = parser.add_mutually_exclusive_group(
-        required=True
-    )
-
-    source_group.add_argument(
-        "--manifest",
-        default=None,
-    )
-
-    source_group.add_argument(
+    parser.add_argument(
         "--input-directory",
+        required=True,
+    )
+
+    parser.add_argument(
+        "--manifest",
         default=None,
     )
 
@@ -59,11 +53,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
-    """Prepare a runtime manifest.
-
-    Returns:
-        int: Process exit code.
-    """
+    """Prepare a runtime manifest."""
     logger = None
 
     try:
@@ -104,4 +94,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(
+        main()
+    )

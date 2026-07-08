@@ -214,3 +214,103 @@ def _ranking_key(match: dict) -> tuple:
         -match["length"],
         match["sseqid"]
     )
+
+def parse_top_blast_matches(
+        top_hits_path: str | Path,
+        logger: Logger | None = None,
+) -> list[dict]:
+    """Parse a ranked BLAST top-hits TSV file.
+
+    Args:
+        top_hits_path (str | Path): Ranked BLAST output.
+        logger (Logger | None, optional): Logger to use.
+
+    Returns:
+        list[dict]: Ranked BLAST matches.
+
+    Raises:
+        FileNotFoundError: If the top-hits file does not exist.
+        ValueError: If the file has unexpected columns or values.
+    """
+    top_hits_path = Path(
+        top_hits_path
+    )
+
+    if not top_hits_path.exists():
+        raise FileNotFoundError(
+            f"BLAST top-hits file not found: "
+            f"{top_hits_path}."
+        )
+
+    if not top_hits_path.is_file():
+        raise ValueError(
+            f"BLAST top-hits path is not a file: "
+            f"{top_hits_path}."
+        )
+
+    expected_columns = [
+        "sample_id",
+        "rank",
+        *BLAST_COLUMNS,
+    ]
+
+    matches: list[dict] = []
+
+    with top_hits_path.open(
+            "r",
+            encoding="utf-8",
+            errors="replace",
+            newline="",
+    ) as handle:
+        reader = csv.DictReader(
+            handle,
+            delimiter="\t",
+        )
+
+        if reader.fieldnames != expected_columns:
+            raise ValueError(
+                "Unexpected BLAST top-hits columns. "
+                f"Expected {expected_columns}, "
+                f"found {reader.fieldnames}."
+            )
+
+        for line_number, row in enumerate(
+                reader,
+                start=2,
+        ):
+            try:
+                row["rank"] = int(
+                    row["rank"]
+                )
+
+                for column in INTEGER_COLUMNS:
+                    row[column] = int(
+                        row[column]
+                    )
+
+                for column in FLOAT_COLUMNS:
+                    row[column] = float(
+                        row[column]
+                    )
+
+            except ValueError as error:
+                raise ValueError(
+                    f"Error parsing BLAST top-hits row "
+                    f"{line_number}: {error}"
+                ) from error
+
+            matches.append(
+                row
+            )
+
+    matches.sort(
+        key=lambda match: match["rank"]
+    )
+
+    if logger is not None:
+        logger.info(
+            f"Parsed {len(matches)} ranked BLAST matches "
+            f"from {top_hits_path}."
+        )
+
+    return matches

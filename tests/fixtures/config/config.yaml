@@ -1,6 +1,8 @@
-output_root: tests/fixtures/outputs
-manifest: tests/fixtures/manifests/valid_real_sra.tsv
-job_id: test_job
+output_root: outputs
+manifest: data/Manifest_260706.xlsx
+input_directory: data/fastq
+job_id: run_May2026
+validate_input_files: true
 
 stages: # Select which stages to run (true/false) - mostly for debugging purposes.
   qc_raw: true 
@@ -9,7 +11,7 @@ stages: # Select which stages to run (true/false) - mostly for debugging purpose
   assembly: true
   annotation: true
   phylogeny: true
-  reporting: false
+  reporting: true
 tools:
   fastp: # Options for fastp.
     threads: 4 # Number of threads to use for fastp.
