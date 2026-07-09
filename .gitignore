@@ -11,3 +11,4 @@ tests/fixtures/logs/
 fasterq.tmp.*/
 resources/mitos/
 tests/fixtures/blast/
+*Zone.Identifier
