@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-from logging import Logger
 from pathlib import Path
 
 from mitopipeline.api.getorganelle import GetOrganelleRunner
@@ -12,8 +11,9 @@ from mitopipeline.models.sample import Sample
 
 
 def parse_args() -> argparse.Namespace:
-    """Parse command-line arguments."""
-    parser = argparse.ArgumentParser(description="Run GetOrganelle on one sample.")
+    parser = argparse.ArgumentParser(
+        description="Run GetOrganelle on one sample."
+    )
     parser.add_argument("--sample-id", required=True)
     parser.add_argument("--in1", required=True)
     parser.add_argument("--in2", required=True)
@@ -22,7 +22,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--organelle-type", required=True)
     parser.add_argument("--threads", type=int, required=True)
     parser.add_argument("--log-file", required=True)
-
     parser.add_argument("--max-rounds", type=int, default=None)
     parser.add_argument("--kmer", default=None)
     parser.add_argument("--word-size", type=int, default=None)
@@ -43,7 +42,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--spades-path", default=None)
     parser.add_argument("--disentangle-df", type=float, default=None)
     parser.add_argument("--disentangle-time-limit", type=int, default=None)
-
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--continue-run", action="store_true")
     parser.add_argument("--fast-mode", action="store_true")
@@ -54,19 +52,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def build_sample(args: argparse.Namespace) -> Sample:
-    """Construct a Sample object."""
-    return Sample(sample_id=args.sample_id, r1=Path(args.in1), r2=Path(args.in2))
-
-
-def build_logger(args: argparse.Namespace) -> Logger:
-    """Construct logger."""
-    Path(args.log_file).parent.mkdir(parents=True, exist_ok=True)
-    return make_logger(name="getorganelle", log_file_path=args.log_file)
-
-
 def build_tool_options(args: argparse.Namespace) -> dict:
-    """Build tool options."""
     return {
         "max_rounds": args.max_rounds,
         "kmer": args.kmer,
@@ -99,18 +85,43 @@ def build_tool_options(args: argparse.Namespace) -> dict:
 
 
 def main() -> int:
-    """Run GetOrganelle."""
     logger = None
+
     try:
         args = parse_args()
-        logger = build_logger(args)
-        sample = build_sample(args)
+        Path(args.log_file).parent.mkdir(parents=True, exist_ok=True)
+        logger = make_logger(
+            name="getorganelle",
+            log_file_path=args.log_file,
+        )
+        sample = Sample(
+            sample_id=args.sample_id,
+            r1=Path(args.in1),
+            r2=Path(args.in2),
+        )
 
-        logger.info(f"Starting GetOrganelle execution for sample {sample.sample_id}.")
+        final_output_dir = Path(args.output_dir)
+        native_output_dir = (
+            final_output_dir
+            / "work"
+            / args.sample_id
+        )
+
+        logger.info(
+            f"Starting GetOrganelle execution for sample "
+            f"{sample.sample_id}."
+        )
+        logger.debug(
+            f"Native output directory: {native_output_dir}"
+        )
+        logger.debug(
+            f"Normalized output directory: {final_output_dir}"
+        )
 
         runner = GetOrganelleRunner(
             working_dir=Path(args.working_dir),
-            output_dir=Path(args.output_dir) / "work" / args.sample_id,
+            output_dir=native_output_dir,
+            final_output_dir=final_output_dir,
             sample=sample,
             organelle_type=args.organelle_type,
             tool_options=build_tool_options(args),
@@ -121,21 +132,25 @@ def main() -> int:
         result = runner.run()
 
         if not result.success:
-            logger.error(f"GetOrganelle execution failed for sample {sample.sample_id}.")
-            logger.debug(f"GetOrganelle return code: {result.return_code}")
-            logger.debug(f"GetOrganelle stderr: {result.stderr}")
-            logger.debug(f"GetOrganelle stdout: {result.stdout}")
-            return result.return_code if result.return_code != 0 else 1
+            logger.error(
+                f"GetOrganelle failed for sample {sample.sample_id}."
+            )
+            logger.debug(f"Return code: {result.return_code}")
+            logger.debug(f"stdout: {result.stdout}")
+            logger.debug(f"stderr: {result.stderr}")
+            return result.return_code or 1
 
-        logger.info(f"GetOrganelle execution successful for sample {sample.sample_id}.")
-        logger.debug(f"GetOrganelle runtime seconds: {result.runtime_seconds}")
+        logger.info(
+            f"GetOrganelle completed successfully for sample "
+            f"{sample.sample_id}."
+        )
         return 0
 
     except Exception as error:
         if logger is not None:
-            logger.exception(f"GetOrganelle execution failed: {error}.")
-        else:
-            print(f"GetOrganelle execution failed before logger setup: {error}")
+            logger.exception(
+                f"GetOrganelle execution failed: {error}"
+            )
         return 1
 
 

@@ -1,122 +1,145 @@
 """fastqc.py
 
-This module contains the API for running FastQC on raw sequencing reads.
+Parallel-safe API wrapper for FastQC.
 """
 
-# Imports
+from __future__ import annotations
+
+from logging import Logger
+from pathlib import Path
+import shutil
+
 from mitopipeline.api.base_tool import BaseTool
 from mitopipeline.models.sample import Sample
-from mitopipeline.models.command_result import CommandResult
-from pathlib import Path
-from logging import Logger
+
 
 class FastQCRunner(BaseTool):
-    """
-    Class for running FastQC on raw sequencing reads.
-    """
-    def __init__(self,
-                 working_dir: Path,
-                 output_dir: Path,
-                 sample: Sample,
-                 logger: Logger | None = None,
-                 tool_name: str = "fastqc",
-                 threads: int = 4,
-                 ):        
-        """Initialize FastQCRunner.
-        
-        Args:
-            working_dir (Path): The working directory for the tool.
-            output_dir (Path): The output directory for the tool.
-            sample (Sample): The sample object.
-            logger (Logger | None, optional): The logger to use. Defaults to None.
-            tool_name (str, optional): The name of the tool. Defaults to "fastqc"."""
-        super().__init__(tool_name=tool_name, working_dir=working_dir, logger=logger)
+    """Run FastQC on paired-end reads."""
+
+    def __init__(
+        self,
+        working_dir: Path,
+        output_dir: Path,
+        final_output_dir: Path,
+        sample: Sample,
+        r1_output_stem: str,
+        r2_output_stem: str,
+        logger: Logger | None = None,
+        tool_name: str = "fastqc",
+        threads: int = 4,
+    ) -> None:
+        super().__init__(
+            tool_name=tool_name,
+            working_dir=Path(working_dir),
+            logger=logger,
+        )
         self.sample = sample
-        self.output_dir = output_dir
-        self.threads = threads
+        self.output_dir = Path(output_dir)
+        self.final_output_dir = Path(final_output_dir)
+        self.r1_output_stem = r1_output_stem
+        self.r2_output_stem = r2_output_stem
+        self.threads = int(threads)
 
     def validate_inputs(self) -> None:
-        """Validate inputs for the FastQCRunner. 
-        
-        Raises value errors if inputs are invalid and send to the logger.
+        for read_path in (self.sample.r1, self.sample.r2):
+            if not read_path.exists() or not read_path.is_file():
+                raise FileNotFoundError(
+                    f"({self.tool_name}) Input FASTQ does not exist: "
+                    f"{read_path}"
+                )
 
-        Returns:
-            None
-        """
-        if not self.sample.r1.exists() or not self.sample.r1.is_file():
-            if self.logger is not None: self.logger.error(f"({self.tool_name}) Input file {self.sample.r1} does not exist.")
-            raise FileNotFoundError(f"({self.tool_name}) Input file {self.sample.r1} does not exist.")
-        if not self.sample.r2.exists() or not self.sample.r2.is_file():
-            if self.logger is not None: self.logger.error(f"({self.tool_name}) Input file {self.sample.r2} does not exist.")
-            raise FileNotFoundError(f"({self.tool_name}) Input file {self.sample.r2} does not exist.")
+        if self.threads <= 0:
+            raise ValueError(
+                f"({self.tool_name}) Invalid thread count: {self.threads}."
+            )
 
     def build_command(self) -> list[str]:
-        """Builds the command to run FastQC on raw sequencing reads. Also creates the output directory if not already created."""
-        self.output_dir.mkdir(parents = True, exist_ok = True)
-        return ["fastqc", 
-                "--threads",
-                str(self.threads),
-                str(self.sample.r1), 
-                str(self.sample.r2), 
-                "-o", 
-                str(self.output_dir),
-                ]
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.final_output_dir.mkdir(parents=True, exist_ok=True)
 
-    def validate_outputs(self) -> None:
-        """Validate outputs for the FastQCRunner.
-        
-        Raises value errors if outputs are invalid and send to the logger.
-
-        Returns:
-            None
-        """
-        # Obtaining the expected output files.
-        outputs = self._expected_fastqc_outputs()
-
-        for expected_file in outputs:
-            if not expected_file.exists():
-                if self.logger is not None: self.logger.error(f"({self.tool_name}) Expected output file {expected_file} does not exist.")
-                raise FileNotFoundError(f"({self.tool_name}) Expected output file {expected_file} does not exist.")
-
-    def run(self) -> CommandResult:
-        """Runs the FastQCRunner and returns a CommandResult object.
-        
-        Returns:
-            CommandResult: The result of running the FastQCRunner.
-        """
-        return super().run()
-
-    def _expected_fastqc_outputs(self) -> list[Path]:
-        """Returns the expected output files for FastQC.
-        
-        Returns:
-            list[Path]: The expected output files for FastQC.
-        """
-        # Obtaining the stem of the input files.
-        r1 = self._strip_fastq_suffix(self.sample.r1)
-        r2 = self._strip_fastq_suffix(self.sample.r2)
+        if self.logger is not None:
+            self.logger.debug(
+                f"({self.tool_name}) Native output directory: "
+                f"{self.output_dir}"
+            )
+            self.logger.debug(
+                f"({self.tool_name}) Final output directory: "
+                f"{self.final_output_dir}"
+            )
 
         return [
-            self.output_dir / f"{r1}_fastqc.html",
-            self.output_dir / f"{r1}_fastqc.zip",
-            self.output_dir / f"{r2}_fastqc.html",
-            self.output_dir / f"{r2}_fastqc.zip"
+            "fastqc",
+            "--threads",
+            str(self.threads),
+            str(self.sample.r1),
+            str(self.sample.r2),
+            "-o",
+            str(self.output_dir),
         ]
 
-    def _strip_fastq_suffix(self, fastq: Path) -> str:
-        """Returns the FASTQ filename without FASTQ extensions.
-        
-        Args:
-            fastq (Path): The path to the FASTQ file.
-        
-        Returns:
-            str: The filename without the FASTQ extension.
-        """
-        # Obtaining the name of the FASTQ file.
-        name = fastq.name
+    def postprocess_outputs(self) -> None:
+        native_r1 = self._native_outputs(self.sample.r1)
+        native_r2 = self._native_outputs(self.sample.r2)
+        final_outputs = self._expected_fastqc_outputs()
 
-        # Removing each of the FASTQ extensions.
-        if name.endswith(".fastq.gz"): return name[:-9]
-        elif name.endswith(".fq.gz"): return name[:-6]
-        elif name.endswith(".fastq"): return name[:-6]
-        elif name.endswith(".fq"): return name[:-3]
+        pairs = [
+            (native_r1[0], final_outputs[0]),
+            (native_r1[1], final_outputs[1]),
+            (native_r2[0], final_outputs[2]),
+            (native_r2[1], final_outputs[3]),
+        ]
+
+        for source, target in pairs:
+            if not source.exists():
+                raise FileNotFoundError(
+                    f"({self.tool_name}) Native FastQC output missing: "
+                    f"{source}"
+                )
+
+            shutil.copy2(source, target)
+
+            if self.logger is not None:
+                self.logger.debug(
+                    f"({self.tool_name}) Normalized output: "
+                    f"{source} -> {target}"
+                )
+
+    def validate_outputs(self) -> None:
+        for expected_file in self._expected_fastqc_outputs():
+            if not expected_file.exists():
+                raise FileNotFoundError(
+                    f"({self.tool_name}) Expected output missing: "
+                    f"{expected_file}"
+                )
+            if expected_file.stat().st_size == 0:
+                raise ValueError(
+                    f"({self.tool_name}) Expected output is empty: "
+                    f"{expected_file}"
+                )
+
+    def _native_outputs(self, fastq: Path) -> tuple[Path, Path]:
+        stem = self._strip_fastq_suffix(fastq)
+        return (
+            self.output_dir / f"{stem}_fastqc.html",
+            self.output_dir / f"{stem}_fastqc.zip",
+        )
+
+    def _expected_fastqc_outputs(self) -> list[Path]:
+        return [
+            self.final_output_dir
+            / f"{self.r1_output_stem}_fastqc.html",
+            self.final_output_dir
+            / f"{self.r1_output_stem}_fastqc.zip",
+            self.final_output_dir
+            / f"{self.r2_output_stem}_fastqc.html",
+            self.final_output_dir
+            / f"{self.r2_output_stem}_fastqc.zip",
+        ]
+
+    @staticmethod
+    def _strip_fastq_suffix(fastq: Path) -> str:
+        name = fastq.name
+        for suffix in (".fastq.gz", ".fq.gz", ".fastq", ".fq"):
+            if name.endswith(suffix):
+                return name[:-len(suffix)]
+        return fastq.stem

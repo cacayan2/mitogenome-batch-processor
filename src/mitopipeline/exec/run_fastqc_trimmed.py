@@ -1,112 +1,94 @@
-"""run_fastqc_trimmed.py
+"""Execution layer for trimmed-read FastQC."""
 
-Execution layer connecting FastQC to Snakemake - this is for data that is already trimmed.
-"""
+from __future__ import annotations
 
-# Imports
 import argparse
-from logging import Logger
 from pathlib import Path
+
 from mitopipeline.api.fastqc import FastQCRunner
-from mitopipeline.models.sample import Sample
 from mitopipeline.logging.logger_factory import make_logger
-import shutil
+from mitopipeline.models.sample import Sample
+
 
 def parse_args() -> argparse.Namespace:
-    """Parse command-line arguments.
-    
-    Returns:
-        argparse.Namespace: Parsed command-line arguments.
-    """
     parser = argparse.ArgumentParser(
-        description = "Process sample inputs and directory paths."
+        description="Run FastQC on trimmed paired-end reads."
     )
-
-    # Define arguments for files.
-    parser.add_argument("--sample-id", help = "The unique identifier for the sample.")
-    parser.add_argument("--r1", help = "Path to the R1 input file.")
-    parser.add_argument("--r2", help = "Path to the R2 input file.")
-    parser.add_argument("--output-dir", help = "Path to the output directory.")
-    parser.add_argument("--working-dir", help = "Path to the working directory.")
-    parser.add_argument("--log-file", help = "Path to the logger.")
-    parser.add_argument("--threads", help = "Number of threads.")
-
-    # Return the parsed arguments.
+    parser.add_argument("--sample-id", required=True)
+    parser.add_argument("--r1", required=True)
+    parser.add_argument("--r2", required=True)
+    parser.add_argument("--output-dir", required=True)
+    parser.add_argument("--working-dir", required=True)
+    parser.add_argument("--log-file", required=True)
+    parser.add_argument("--threads", type=int, required=True)
     return parser.parse_args()
 
-def build_sample(args) -> Sample:
-    """Construct a Sample object from CLI arguments.
-    
-    Args:
-        args (argparse.Namespace): Parsed command-line arguments.
-    
-    Returns:
-        Sample: A Sample object.
-    """
-    return Sample(sample_id = args.sample_id, r1 = Path(args.r1), r2 = Path(args.r2))
 
-def build_logger(args) -> Logger:
-    """Constructs a logger object using the make_logger function from the logger module.
-    
-    Args:
-        args (argparse.Namespace): Parsed command-line arguments.
-    
-    Returns:
-        Logger: A logger object.
-    """
-    return make_logger(name = "fastqc.trimmed", log_file_path = args.log_file)
 def main() -> int:
-    """Run FastQC for a single sequencing sample.
-    
-    Returns:
-        int: 0 if successful, 1 otherwise.
-    """
-    # Setting none object for logger.
     logger = None
-    
+
     try:
-        # Obtaining the parsed arguments.
         args = parse_args()
-
-        # Building the logger. 
-        logger = build_logger(args)
-
-        # Constructing the sample object.
-        sample = build_sample(args)
-
-        # Logging the sample object.
-        if logger is not None: logger.info(f"Starting FastQC execution for trimmed sample {sample.sample_id}.")
-
-        # Creating the FastQC API object.
-        runner = FastQCRunner(
-            sample = sample, 
-            output_dir = Path(args.output_dir), 
-            working_dir = Path(args.working_dir), 
-            logger = logger,
-            threads = args.threads,
-            tool_name = "fastqc.trimmed"
+        Path(args.log_file).parent.mkdir(parents=True, exist_ok=True)
+        logger = make_logger(
+            name="fastqc.trimmed",
+            log_file_path=args.log_file,
+        )
+        sample = Sample(
+            sample_id=args.sample_id,
+            r1=Path(args.r1),
+            r2=Path(args.r2),
         )
 
-        # Running FastQC and obtaining CommandResult.
+        final_output_dir = Path(args.output_dir)
+        native_output_dir = (
+            final_output_dir
+            / "work"
+            / args.sample_id
+        )
+
+        logger.info(
+            f"Starting FastQC execution for trimmed sample "
+            f"{sample.sample_id}."
+        )
+
+        runner = FastQCRunner(
+            sample=sample,
+            output_dir=native_output_dir,
+            final_output_dir=final_output_dir,
+            r1_output_stem=f"{sample.sample_id}_R1.trimmed",
+            r2_output_stem=f"{sample.sample_id}_R2.trimmed",
+            working_dir=Path(args.working_dir),
+            logger=logger,
+            threads=args.threads,
+            tool_name="fastqc.trimmed",
+        )
+
         result = runner.run()
 
-        # Checking execution result.
         if not result.success:
-            if logger: 
-                logger.error(f"FastQC failed for trimmed sample {sample.sample_id}.")
-                logger.debug(f"FastQC return code: {result.return_code}")
-                logger.debug(f"FastQC stdout:\n{result.stdout}")
-                logger.debug(f"FastQC stderr:\n{result.stderr}")
-            
-            return result.return_code if result.return_code != 0 else 1
-        if logger:
-            logger.info(f"FastQC completed successfully for trimmed sample {sample.sample_id}.")
-            logger.debug(f"FastQC runtime seconds: {result.runtime_seconds}")
+            logger.error(
+                f"FastQC failed for trimmed sample "
+                f"{sample.sample_id}."
+            )
+            logger.debug(f"Return code: {result.return_code}")
+            logger.debug(f"stdout: {result.stdout}")
+            logger.debug(f"stderr: {result.stderr}")
+            return result.return_code or 1
+
+        logger.info(
+            f"FastQC completed successfully for trimmed sample "
+            f"{sample.sample_id}."
+        )
         return 0
+
     except Exception as error:
-        if logger:
-            logger.exception(f"FastQC execution failed: {error}")
+        if logger is not None:
+            logger.exception(
+                f"FastQC trimmed execution failed: {error}"
+            )
         return 1
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
