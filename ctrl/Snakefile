@@ -1,56 +1,70 @@
 """Snakefile
 
-This file contains the rule for running the overall Snakemake orchestration.
+Top-level Snakemake orchestration for MitoPipeline.
 """
 
-# Imports
 from pathlib import Path
 
 from mitopipeline.config.runtime_manifest import (
     prepare_runtime_manifest,
 )
 
-
-# Reads the configuration file and specifies appropriate directories.
-OUTPUT_ROOT = Path(
-    config["output_root"]
+OUTPUT_ROOT_VALUE = config.get(
+    "output_root"
 )
 
-JOB_ID = config["job_id"]
+if not OUTPUT_ROOT_VALUE:
+    raise ValueError(
+        "'output_root' is required in the pipeline config."
+    )
+
+JOB_ID = config.get(
+    "job_id"
+)
+
+if not JOB_ID:
+    raise ValueError(
+        "'job_id' is required in the resolved pipeline config."
+    )
+
+SOURCE_MANIFEST = config.get(
+    "manifest"
+)
+
+INPUT_DIRECTORY = config.get(
+    "input_directory"
+)
+
+if not SOURCE_MANIFEST and not INPUT_DIRECTORY:
+    raise ValueError(
+        "Provide either 'manifest' or 'input_directory'."
+    )
+
+
+OUTPUT_ROOT = Path(
+    OUTPUT_ROOT_VALUE
+)
 
 JOB_DIR = (
     OUTPUT_ROOT
     / JOB_ID
 )
 
-# Obtaining the stages from the configuration file.
 STAGES = config.get(
     "stages",
     {},
 )
 
-# Preparing the normalized runtime sample manifest.
 RUNTIME_MANIFEST_PATH = (
     JOB_DIR
     / "metadata"
     / "runtime_manifest.tsv"
 )
 
-if not config.get(
-    "input_directory"
-):
-    raise ValueError(
-        "'input_directory' is required in the pipeline config."
-    )
-
 SAMPLE_TABLE = prepare_runtime_manifest(
     output_path=RUNTIME_MANIFEST_PATH,
-    source_manifest=config.get(
-        "manifest"
-    ),
-    input_directory=config[
-        "input_directory"
-    ],
+    source_manifest=SOURCE_MANIFEST,
+    input_directory=INPUT_DIRECTORY,
     validate_files=config.get(
         "validate_input_files",
         True,
@@ -59,33 +73,56 @@ SAMPLE_TABLE = prepare_runtime_manifest(
 
 SAMPLES = SAMPLE_TABLE.index.tolist()
 
-
 def stage_enabled(
         stage_name: str,
 ) -> bool:
-    """Return True if the stage is enabled."""
-    return STAGES.get(
-        stage_name,
-        False,
+    """Return whether a requested output stage is enabled."""
+    return bool(
+        STAGES.get(
+            stage_name,
+            False,
+        )
     )
 
 
-def enabled_targets() -> list:
-    """Return final workflow targets for enabled stages."""
-    targets = []
+def sample_targets(
+        directory: str,
+        filename: str,
+) -> list[str]:
+    """Expand one sample-level output path for every sample."""
+    return expand(
+        str(
+            JOB_DIR
+            / directory
+            / filename
+        ),
+        sample=SAMPLES,
+    )
+
+
+def validate_stage_configuration() -> None:
+    """Validate relationships between requested output stages."""
+    if stage_enabled(
+        "pdf_export"
+    ) and not stage_enabled(
+        "reporting"
+    ):
+        raise ValueError(
+            "'pdf_export' requires 'reporting' to be enabled."
+        )
+
+
+def enabled_targets() -> list[str]:
+    """Return final targets requested by the stage configuration."""
+    targets: list[str] = []
 
     if stage_enabled(
         "qc_raw"
     ):
         targets.extend(
-            expand(
-                str(
-                    JOB_DIR
-                    / "qc"
-                    / "raw"
-                    / "{sample}.qc.raw.done"
-                ),
-                sample=SAMPLES,
+            sample_targets(
+                directory="qc/raw",
+                filename="{sample}.qc.raw.done",
             )
         )
 
@@ -93,13 +130,9 @@ def enabled_targets() -> list:
         "trimming"
     ):
         targets.extend(
-            expand(
-                str(
-                    JOB_DIR
-                    / "trimming"
-                    / "{sample}.trimming.done"
-                ),
-                sample=SAMPLES,
+            sample_targets(
+                directory="trimming",
+                filename="{sample}.trimming.done",
             )
         )
 
@@ -107,14 +140,9 @@ def enabled_targets() -> list:
         "qc_trimmed"
     ):
         targets.extend(
-            expand(
-                str(
-                    JOB_DIR
-                    / "qc"
-                    / "trimmed"
-                    / "{sample}.qc.trimmed.done"
-                ),
-                sample=SAMPLES,
+            sample_targets(
+                directory="qc/trimmed",
+                filename="{sample}.qc.trimmed.done",
             )
         )
 
@@ -122,13 +150,9 @@ def enabled_targets() -> list:
         "assembly"
     ):
         targets.extend(
-            expand(
-                str(
-                    JOB_DIR
-                    / "assembly"
-                    / "{sample}.assembly.done"
-                ),
-                sample=SAMPLES,
+            sample_targets(
+                directory="assembly",
+                filename="{sample}.assembly.done",
             )
         )
 
@@ -136,13 +160,19 @@ def enabled_targets() -> list:
         "annotation"
     ):
         targets.extend(
-            expand(
-                str(
-                    JOB_DIR
-                    / "annotation"
-                    / "{sample}.annotation.done"
-                ),
-                sample=SAMPLES,
+            sample_targets(
+                directory="annotation",
+                filename="{sample}.annotation.done",
+            )
+        )
+
+    if stage_enabled(
+        "visualization"
+    ):
+        targets.extend(
+            sample_targets(
+                directory="visualization",
+                filename="{sample}.visualization.done",
             )
         )
 
@@ -150,14 +180,9 @@ def enabled_targets() -> list:
         "phylogeny"
     ):
         targets.extend(
-            expand(
-                str(
-                    JOB_DIR
-                    / "phylogeny"
-                    / "figures"
-                    / "{sample}.phylogeny.done"
-                ),
-                sample=SAMPLES,
+            sample_targets(
+                directory="phylogeny/figures",
+                filename="{sample}.phylogeny.done",
             )
         )
 
@@ -165,35 +190,27 @@ def enabled_targets() -> list:
         "reporting"
     ):
         targets.extend(
-            expand(
-                str(
-                    JOB_DIR
-                    / "reporting"
-                    / "{sample}.report.md"
-                ),
-                sample=SAMPLES,
+            sample_targets(
+                directory="reporting",
+                filename="{sample}.report.md",
             )
         )
 
-        if stage_enabled(
+        targets.append(
+            str(
+                JOB_DIR
+                / "reporting"
+                / "run_report.md"
+            )
+        )
+
+    if stage_enabled(
         "pdf_export"
     ):
-        if not stage_enabled(
-            "reporting"
-        ):
-            raise ValueError(
-                "'pdf_export' requires the 'reporting' stage "
-                "to also be enabled."
-            )
-
         targets.extend(
-            expand(
-                str(
-                    JOB_DIR
-                    / "reporting"
-                    / "{sample}.report.pdf"
-                ),
-                sample=SAMPLES,
+            sample_targets(
+                directory="reporting",
+                filename="{sample}.report.pdf",
             )
         )
 
@@ -205,62 +222,63 @@ def enabled_targets() -> list:
             )
         )
 
+    if stage_enabled(
+        "sra_archival"
+    ):
+        targets.append(
+            str(
+                JOB_DIR
+                / "submission"
+                / "sra"
+                / "sra_metadata.tsv"
+            )
+        )
+
+    if stage_enabled(
+        "biosample_archival"
+    ):
+        targets.append(
+            str(
+                JOB_DIR
+                / "submission"
+                / "biosample"
+                / "biosample_metadata.tsv"
+            )
+        )
+
     return targets
 
 
+validate_stage_configuration()
+
 ENABLED_TARGETS = enabled_targets()
 
-
 rule all:
-    """Run enabled workflow stages."""
+    """Produce all configured pipeline outputs."""
 
     input:
         ENABLED_TARGETS
 
+include: "rules/qc.raw.smk"
+include: "rules/trimming.smk"
+include: "rules/qc.trimmed.smk"
 
-# Include rule files conditionally.
-if stage_enabled(
-    "qc_raw"
-):
-    include: "rules/qc.raw.smk"
+include: "rules/getorganelle_config.smk"
+include: "rules/assembly.smk"
 
-if stage_enabled(
-    "trimming"
-):
-    include: "rules/trimming.smk"
+include: "rules/mitos2_config.smk"
+include: "rules/annotation.smk"
 
-if stage_enabled(
-    "qc_trimmed"
-):
-    include: "rules/qc.trimmed.smk"
+include: "rules/visualization.smk"
 
-if stage_enabled(
-    "assembly"
-):
-    include: "rules/getorganelle_config.smk"
-    include: "rules/assembly.smk"
+include: "rules/blast_config.smk"
+include: "rules/blast.smk"
+include: "rules/blast_hits.smk"
+include: "rules/alignment_dataset.smk"
+include: "rules/phylogeny.smk"
 
-if stage_enabled(
-    "annotation"
-):
-    include: "rules/mitos2_config.smk"
-    include: "rules/annotation.smk"
+include: "rules/reporting.smk"
+include: "rules/report_pdf.smk"
 
-if stage_enabled(
-    "phylogeny"
-):
-    include: "rules/blast_config.smk"
-    include: "rules/blast.smk"
-    include: "rules/blast_hits.smk"
-    include: "rules/alignment_dataset.smk"
-    include: "rules/phylogeny.smk"
-
-if stage_enabled(
-    "reporting"
-):
-    include: "rules/reporting.smk"
-
-if stage_enabled(
-    "pdf_export"
-):
-    include: "rules/report_pdf.smk"
+include: "rules/sra_archival.smk"
+include: "rules/biosample_archival.smk"

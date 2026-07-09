@@ -47,6 +47,9 @@ def test_snakemake_dry_run():
         assert "rule infer_phylogeny" in result.stdout
         assert "rule render_phylogenetic_tree" in result.stdout
         assert "rule reporting" in result.stdout
+        assert "rule circular_genome_map" in result.stdout
+        assert "rule sra_metadata" in result.stdout
+        assert "rule biosample_metadata" in result.stdout
         
     finally:
         # Cleanup.
