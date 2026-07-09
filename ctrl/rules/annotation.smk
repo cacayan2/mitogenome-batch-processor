@@ -3,7 +3,6 @@
 Contains rules for mitochondrial genome annotation.
 """
 
-# Imports
 from pathlib import Path
 
 
@@ -11,8 +10,8 @@ rule annotation:
     """Run MITOS2 annotation on assembled mitochondrial genomes."""
 
     input:
-        fasta=str(JOB_DIR / "assembly" / "{sample}.fasta"),
-        assembly_done=str(JOB_DIR / "assembly" / "{sample}.assembly.done"),
+        fasta=str(JOB_DIR / "assembly" / "{sample}" / "{sample}.fasta"),
+        assembly_done=str(JOB_DIR / "assembly" / "{sample}" / "{sample}.assembly.done"),
         mitos2_done=str(JOB_DIR / "setup" / "mitos2" / "mitos2.done")
 
     output:
@@ -21,10 +20,28 @@ rule annotation:
         fasta=str(JOB_DIR / "annotation" / "{sample}" / "result.fas")
 
     params:
-        output_dir=str((Path.cwd() / JOB_DIR / "annotation" / "{sample}").resolve()),
+        output_dir=str(
+            (
+                Path.cwd()
+                / JOB_DIR
+                / "annotation"
+                / "{sample}"
+            ).resolve()
+        ),
         working_dir=str(Path.cwd()),
-        log_file=str((Path.cwd() / JOB_DIR / "logs" / "annotation" / "{sample}.log").resolve()),
-        conda_env=config["tools"]["mitos2"].get("conda_env", "mito-annotation"),
+        log_file=str(
+            (
+                Path.cwd()
+                / JOB_DIR
+                / "logs"
+                / "annotation"
+                / "{sample}.log"
+            ).resolve()
+        ),
+        conda_env=config["tools"]["mitos2"].get(
+            "conda_env",
+            "mito-annotation",
+        ),
         genetic_code=config["tools"]["mitos2"].get("genetic_code", 2),
         refdir=str(Path(config["tools"]["mitos2"]["refdir"]).resolve()),
         refseqver=config["tools"]["mitos2"]["refseqver"],
@@ -41,7 +58,6 @@ rule annotation:
 
     shell:
         """
-
         python -m mitopipeline.exec.run_mitos2 \
             --conda-env {params.conda_env} \
             --sample-id {wildcards.sample} \
@@ -57,5 +73,7 @@ rule annotation:
             --best {params.best} \
             --ncbicode {params.ncbicode}
 
+        test -s {output.gff}
+        test -s {output.fasta}
         touch {output.done}
         """

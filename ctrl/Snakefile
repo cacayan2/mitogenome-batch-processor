@@ -10,6 +10,9 @@ from pathlib import Path
 
 import pandas as pd
 
+wildcard_constraints:
+    sample = r"[^/]+"
+
 PROJECT_ROOT = Path(workflow.basedir).parent.resolve()
 SRC_DIR = PROJECT_ROOT / "src"
 

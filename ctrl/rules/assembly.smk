@@ -91,8 +91,8 @@ rule assembly:
         getorganelle_db=getorganelle_database_input(config)
 
     output:
-        fasta=str(JOB_DIR / "assembly" / "{sample}.fasta"),
-        gfa=str(JOB_DIR / "assembly" / "{sample}.gfa"),
+        fasta=str(JOB_DIR / "assembly" / "{sample}" / "{sample}.fasta"),
+        gfa=str(JOB_DIR / "assembly" / "{sample}" / "{sample}.gfa"),
         done=str(
             JOB_DIR
             / "assembly"

@@ -103,7 +103,6 @@ def main() -> int:
         final_output_dir = Path(args.output_dir)
         native_output_dir = (
             final_output_dir
-            / "work"
             / args.sample_id
         )
 
