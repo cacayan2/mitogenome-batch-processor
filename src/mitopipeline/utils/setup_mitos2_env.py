@@ -1,258 +1,112 @@
-"""setup_mitos2_env.py
+"""Create/verify MITOS2 and prepare its references."""
 
-Set up MITOS2 for mitopipeline annotation. 
-"""
+from __future__ import annotations
 
-# Imports
 import argparse
+import json
+from pathlib import Path
 import shutil
 import subprocess
-from pathlib import Path
+
 from mitopipeline.logging.logger_factory import make_logger
 
+
 def parse_args() -> argparse.Namespace:
-    """Parse command-line arguments.
-
-    Returns:
-        argparse.Namespace: Parsed command-line arguments.
-    """
-    # Initializing parser object.
-    parser = argparse.ArgumentParser(description =  "Set up MITOS2 annotation environment.")
-
-    # Adding arguments. 
-    parser.add_argument("--env-name", default="mito-annotation", help="MITOS2 Conda environment name.")
-    parser.add_argument("--env-file", default="envs/annotation.yaml", help="Path to MITOS2 environment YAML.")
-    parser.add_argument("--refseqver", default="refseq89m", help="MITOS2 reference version.")
-    parser.add_argument("--refdir", default="resources/mitos", help="MITOS2 reference root directory.")
-    parser.add_argument("--zenodo-record", default="4284483", help="Zenodo record ID.")
-    parser.add_argument("--done-file", required=True, help="Path to setup done file.")
-    parser.add_argument("--log-file", required=True, help="Path to setup log file.")
-    parser.add_argument("--overwrite-reference", action="store_true", help="Overwrite MITOS2 reference data.")
-
-    # Returning parsed arguments.
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--env-name", default="mito-annotation")
+    parser.add_argument("--env-file", default="envs/annotation.yaml")
+    parser.add_argument("--refseqver", default="refseq89m")
+    parser.add_argument("--refdir", default="resources/mitos")
+    parser.add_argument("--zenodo-record", default="4284483")
+    parser.add_argument("--reference-ready-file", required=True)
+    parser.add_argument("--done-file", required=True)
+    parser.add_argument("--log-file", required=True)
+    parser.add_argument("--overwrite-reference", action="store_true")
     return parser.parse_args()
 
+
 def run_command(command: list[str], logger) -> subprocess.CompletedProcess:
-    """Run a command and capture output.
-
-    Args:
-        command (list[str]): Command to run.
-        logger (logging.Logger): Logger object.
-
-    Returns:
-        subprocess.CompletedProcess: Result of the command execution.
-    """
-    # Logging command.
-    logger.debug(f"Command: {command}")
-
-    # Running command.
+    logger.debug("Command: %s", command)
     result = subprocess.run(command, capture_output=True, text=True)
-
-    # Logging output.
-    logger.debug(f"stdout: {result.stdout}")
-    logger.debug(f"stderr: {result.stderr}")
-
-    # Returning result.
+    logger.debug("stdout:\n%s", result.stdout)
+    logger.debug("stderr:\n%s", result.stderr)
     return result
 
-def conda_exists() -> bool:
-    """Return True if Conda is available.
-    
-    Returns:
-        bool: True if Conda is available, False otherwise.
-    """
-    return shutil.which("conda") is not None
 
-def conda_env_exists(env_name: str, logger) -> bool:
-    """Return True if a Conda environment exists.
-
-    Args:
-        env_name (str): Conda environment name.
-        logger: Logger object.
-
-    Returns:
-        bool: True if environment exists.
-    """
-    # Listing conda environments.
-    result = run_command(["conda", "env", "list"], logger)
-
-    # If conda env list fails, treat as unavailable.
+def env_exists(name: str, logger) -> bool:
+    result = run_command(["conda", "env", "list", "--json"], logger)
     if result.returncode != 0:
         return False
-
-    # Checking first column for environment name.
-    for line in result.stdout.splitlines():
-        parts = line.split()
-
-        if len(parts) > 0 and parts[0] == env_name:
-            return True
-
-    return False
+    return any(Path(path).name == name for path in json.loads(result.stdout).get("envs", []))
 
 
-def create_conda_env(env_name: str, env_file: Path, logger) -> None:
-    """Create the MITOS2 Conda environment.
-
-    Args:
-        env_name (str): Conda environment name.
-        env_file (Path): Path to environment YAML.
-        logger: Logger object.
-    """
-    # Checking environment file.
-    if not env_file.exists():
-        raise FileNotFoundError(f"MITOS2 environment file does not exist: {env_file}")
-
-    # Creating environment.
-    logger.info(f"Creating MITOS2 Conda environment: {env_name}")
-
+def create_env(name: str, env_file: Path, logger) -> None:
+    if not env_file.is_file():
+        raise FileNotFoundError(f"MITOS2 environment file missing: {env_file}")
     result = run_command(
-        [
-            "conda",
-            "env",
-            "create",
-            "-f",
-            str(env_file),
-        ],
+        ["conda", "env", "create", "-n", name, "-f", str(env_file)],
         logger,
     )
-
-    # Checking command success.
     if result.returncode != 0:
-        raise RuntimeError(f"Failed to create MITOS2 Conda environment: {env_name}")
+        raise RuntimeError(f"Failed to create MITOS2 environment: {name}")
 
 
-def verify_mitos2(env_name: str, logger) -> None:
-    """Verify that MITOS2 can be called from the Conda environment.
-
-    Args:
-        env_name (str): Conda environment name.
-        logger: Logger object.
-    """
-    # Running MITOS2 help command.
-    logger.info(f"Verifying MITOS2 executable in Conda environment: {env_name}")
-
-    result = run_command(
-        [
-            "conda",
-            "run",
-            "-n",
-            env_name,
-            "runmitos.py",
-            "--help",
-        ],
-        logger,
-    )
-
-    # Checking command success.
-    if result.returncode != 0:
-        raise RuntimeError(f"MITOS2 verification failed in Conda environment: {env_name}")
-
-
-def setup_reference_data(
-    refseqver: str,
-    refdir: Path,
-    zenodo_record: str,
-    done_file: Path,
-    log_file: Path,
-    overwrite_reference: bool,
-    logger,
-) -> None:
-    """Run the MITOS2 reference data setup utility.
-
-    Args:
-        refseqver (str): MITOS2 reference version.
-        refdir (Path): MITOS2 reference root.
-        zenodo_record (str): Zenodo record ID.
-        done_file (Path): Done file path.
-        log_file (Path): Log file path.
-        overwrite_reference (bool): Whether to overwrite reference data.
-        logger: Logger object.
-    """
-    # Building setup command.
-    command = [
-        "python",
-        "-m",
-        "mitopipeline.utils.setup_mitos2_reference_data",
-        "--refseqver",
-        refseqver,
-        "--refdir",
-        str(refdir),
-        "--zenodo-record",
-        zenodo_record,
-        "--done-file",
-        str(done_file),
-        "--log-file",
-        str(log_file),
-    ]
-
-    # Adding overwrite flag if requested.
-    if overwrite_reference:
-        command.append("--overwrite")
-
-    # Running setup command.
-    logger.info("Setting up MITOS2 reference data.")
-    result = run_command(command, logger)
-
-    # Checking command success.
-    if result.returncode != 0:
-        raise RuntimeError("MITOS2 reference data setup failed.")
+def resolve_executable(name: str, logger) -> str:
+    for executable in ("runmitos", "runmitos.py"):
+        result = run_command(
+            ["conda", "run", "-n", name, executable, "--help"],
+            logger,
+        )
+        if result.returncode == 0:
+            return executable
+    raise RuntimeError("Neither runmitos nor runmitos.py is available.")
 
 
 def main() -> int:
-    """Set up MITOS2 for pipeline use.
-
-    Returns:
-        int: Exit code.
-    """
-    # Parsing arguments.
     args = parse_args()
-
-    # Building paths.
-    env_file = Path(args.env_file)
-    refdir = Path(args.refdir)
-    done_file = Path(args.done_file)
-    log_file = Path(args.log_file)
-
-    # Creating logger.
-    logger = make_logger(name="mitos2_setup", log_file_path=log_file)
+    logger = make_logger("mitos2_setup", args.log_file)
+    done_file = Path(args.done_file).resolve()
+    ready_file = Path(args.reference_ready_file).resolve()
 
     try:
-        # Checking Conda.
-        if not conda_exists():
+        if shutil.which("conda") is None:
             raise RuntimeError("Conda was not found on PATH.")
 
-        # Creating environment if missing.
-        if conda_env_exists(args.env_name, logger):
-            logger.info(f"MITOS2 Conda environment already exists: {args.env_name}")
+        if not env_exists(args.env_name, logger):
+            create_env(args.env_name, Path(args.env_file), logger)
         else:
-            create_conda_env(args.env_name, env_file, logger)
+            logger.info("MITOS2 environment already exists: %s", args.env_name)
 
-        # Verifying MITOS2.
-        verify_mitos2(args.env_name, logger)
+        executable = resolve_executable(args.env_name, logger)
 
-        # Setting up reference data.
-        setup_reference_data(
-            refseqver=args.refseqver,
-            refdir=refdir,
-            zenodo_record=args.zenodo_record,
-            done_file=done_file,
-            log_file=log_file,
-            overwrite_reference=args.overwrite_reference,
-            logger=logger,
-        )
+        command = [
+            "python", "-m", "mitopipeline.utils.setup_mitos2_reference_data",
+            "--refseqver", args.refseqver,
+            "--refdir", str(Path(args.refdir).resolve()),
+            "--zenodo-record", args.zenodo_record,
+            "--conda-env", args.env_name,
+            "--reference-ready-file", str(ready_file),
+            "--log-file", str(Path(args.log_file).resolve()),
+        ]
+        if args.overwrite_reference:
+            command.append("--overwrite")
 
-        # Writing final setup done file.
+        result = run_command(command, logger)
+        if result.returncode != 0:
+            raise RuntimeError("MITOS2 reference setup failed.")
+
         done_file.parent.mkdir(parents=True, exist_ok=True)
         done_file.write_text(
-            f"env_name={args.env_name}\nrefseqver={args.refseqver}\nrefdir={refdir}\n",
+            f"env_name={args.env_name}\nexecutable={executable}\n"
+            f"refseqver={args.refseqver}\nrefdir={Path(args.refdir).resolve()}\n",
             encoding="utf-8",
         )
-
         logger.info("MITOS2 setup completed successfully.")
         return 0
 
     except Exception as error:
-        logger.exception(f"MITOS2 setup failed: {error}")
+        done_file.unlink(missing_ok=True)
+        logger.exception("MITOS2 setup failed: %s", error)
         return 1
 
 

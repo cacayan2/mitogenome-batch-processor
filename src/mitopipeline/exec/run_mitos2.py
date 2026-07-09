@@ -1,7 +1,4 @@
-"""run_mitos2.py
-
-Execution script for running MITOS2 annotation.
-"""
+"""Execution script for MITOS2 annotation."""
 
 from __future__ import annotations
 
@@ -13,26 +10,17 @@ from mitopipeline.logging.logger_factory import make_logger
 
 
 def parse_bool(value: str) -> bool:
-    """Parse a string boolean value."""
-    normalized = value.strip().lower()
-
-    if normalized in {"true", "1", "yes", "y"}:
+    value = value.strip().lower()
+    if value in {"true", "1", "yes", "y"}:
         return True
-
-    if normalized in {"false", "0", "no", "n"}:
+    if value in {"false", "0", "no", "n"}:
         return False
+    raise ValueError(f"Cannot parse boolean: {value}")
 
-    raise ValueError(f"Cannot parse boolean value: {value}")
 
-
-def parse_args() -> argparse.Namespace:
-    """Parse command-line arguments."""
-    parser = argparse.ArgumentParser(description="Run MITOS2 annotation.")
-    parser.add_argument(
-        "--conda-env",
-        default="mito-annotation",
-        help="Conda environment containing MITOS2.",
-    )
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--conda-env", default="mito-annotation")
     parser.add_argument("--sample-id", required=True)
     parser.add_argument("--input-fasta", required=True)
     parser.add_argument("--output-dir", required=True)
@@ -41,7 +29,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--genetic-code", type=int, required=True)
     parser.add_argument("--refseqver", required=True)
     parser.add_argument("--refdir", required=True)
-    parser.add_argument("--linear", action="store_true")
     parser.add_argument("--zip-output", action="store_true")
     parser.add_argument("--circular", required=True)
     parser.add_argument("--noplots", required=True)
@@ -50,22 +37,14 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> int:
-    """Run MITOS2 annotation."""
+def main():
     args = parse_args()
-
-    Path(args.log_file).parent.mkdir(parents=True, exist_ok=True)
-    logger = make_logger(
-        name=f"mitos2.{args.sample_id}",
-        log_file_path=args.log_file,
-    )
-
-    logger.info(
-        f"Starting MITOS2 annotation for sample {args.sample_id}."
-    )
+    logger = make_logger(f"mitos2.{args.sample_id}", args.log_file)
+    logger.info("Starting MITOS2 annotation for sample %s.", args.sample_id)
 
     try:
         runner = MITOS2Runner(
+            sample_id=args.sample_id,
             input_fasta=Path(args.input_fasta).resolve(),
             output_dir=Path(args.output_dir).resolve(),
             working_dir=Path(args.working_dir).resolve(),
@@ -80,29 +59,10 @@ def main() -> int:
             ncbicode=parse_bool(args.ncbicode),
             logger=logger,
         )
-
         result = runner.run()
-
-        if not result.success:
-            logger.error(
-                f"MITOS2 external command failed for sample "
-                f"{args.sample_id}."
-            )
-            logger.debug(f"MITOS2 return code: {result.return_code}")
-            logger.debug(f"MITOS2 stdout:\n{result.stdout}")
-            logger.debug(f"MITOS2 stderr:\n{result.stderr}")
-            return result.return_code or 1
-
-        logger.info(
-            f"MITOS2 annotation completed for sample {args.sample_id}."
-        )
-        return 0
-
+        return 0 if result.success else (result.return_code or 1)
     except Exception as error:
-        logger.exception(
-            f"MITOS2 annotation failed for sample {args.sample_id}: "
-            f"{error}"
-        )
+        logger.exception("MITOS2 annotation failed for sample %s: %s", args.sample_id, error)
         return 1
 
 

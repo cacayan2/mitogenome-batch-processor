@@ -104,7 +104,7 @@ tools:
     reference_fasta: resources/blast/reference_mitogenomes.fasta # Path to the reference FASTA file
     database_title: MitoPipeline mitochondrial reference database # Title of the BLAST database
     initialize_database: true # Whether to initialize the BLAST database
-    overwrite_database: false # Whether to overwrite the BLAST database
+    overwrite_database: true # Whether to overwrite the BLAST database
     parse_seqids: true # Whether to parse sequence IDs in the BLAST database
     threads: 8 # Number of threads to use for BLAST
     task: blastn # BLAST task to use
