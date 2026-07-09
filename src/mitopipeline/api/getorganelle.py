@@ -1,7 +1,4 @@
-"""getorganelle.py
-
-Parallel-safe API wrapper for GetOrganelle.
-"""
+"""GetOrganelle API wrapper using one sample directory."""
 
 from __future__ import annotations
 
@@ -26,13 +23,12 @@ VALID_ORGANELLE_TYPES = {
 
 
 class GetOrganelleRunner(BaseTool):
-    """Run GetOrganelle for one sample."""
+    """Run GetOrganelle for one sample directory."""
 
     def __init__(
         self,
         working_dir: Path,
         output_dir: Path,
-        final_output_dir: Path,
         sample: Sample,
         organelle_type: str,
         tool_options: dict | None = None,
@@ -45,60 +41,41 @@ class GetOrganelleRunner(BaseTool):
             working_dir=Path(working_dir),
             logger=logger,
         )
-        self.sample = sample
         self.output_dir = Path(output_dir)
-        self.final_output_dir = Path(final_output_dir)
-        self.threads = threads
+        self.sample = sample
         self.organelle_type = organelle_type
         self.tool_options = tool_options or {}
+        self.threads = int(threads)
 
     @property
     def standardized_fasta(self) -> Path:
-        return self.final_output_dir / f"{self.sample.sample_id}.fasta"
+        return self.output_dir / "data.fasta"
 
     @property
     def standardized_gfa(self) -> Path:
-        return self.final_output_dir / f"{self.sample.sample_id}.gfa"
+        return self.output_dir / "graph.gfa"
 
     def validate_inputs(self) -> None:
         if self.organelle_type not in VALID_ORGANELLE_TYPES:
             raise ValueError(
-                f"({self.tool_name}) Invalid organelle type "
-                f"{self.organelle_type}."
+                f"Unsupported organelle type: {self.organelle_type}"
             )
 
-        for read_path in (self.sample.r1, self.sample.r2):
-            if not read_path.exists() or not read_path.is_file():
-                raise FileNotFoundError(
-                    f"({self.tool_name}) Input file does not exist: "
-                    f"{read_path}"
-                )
+        for path in (self.sample.r1, self.sample.r2):
+            if not path.is_file():
+                raise FileNotFoundError(f"Input file not found: {path}")
 
         if self.threads <= 0:
-            raise ValueError(
-                f"({self.tool_name}) Invalid thread count: {self.threads}."
-            )
+            raise ValueError("threads must be greater than zero.")
 
-        available_cpus = os.cpu_count()
-        if available_cpus is not None and self.threads > available_cpus:
+        cpus = os.cpu_count()
+        if cpus is not None and self.threads > cpus:
             raise ValueError(
-                f"({self.tool_name}) Threads exceed available CPUs: "
-                f"{self.threads} > {available_cpus}."
+                f"threads exceed available CPUs: {self.threads} > {cpus}"
             )
 
     def build_command(self) -> list[str]:
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.final_output_dir.mkdir(parents=True, exist_ok=True)
-
-        if self.logger is not None:
-            self.logger.debug(
-                f"({self.tool_name}) Native output directory: "
-                f"{self.output_dir}"
-            )
-            self.logger.debug(
-                f"({self.tool_name}) Final output directory: "
-                f"{self.final_output_dir}"
-            )
 
         command = [
             "get_organelle_from_reads.py",
@@ -114,20 +91,7 @@ class GetOrganelleRunner(BaseTool):
             str(self.threads),
         ]
 
-        return self._add_additional_getorganelle_args(command)
-
-    def validate_outputs(self) -> None:
-        for output in self._expected_getorganelle_outputs():
-            if not output.exists():
-                raise FileNotFoundError(
-                    f"({self.tool_name}) Expected output does not exist: "
-                    f"{output}"
-                )
-            if not output.is_file() or output.stat().st_size == 0:
-                raise ValueError(
-                    f"({self.tool_name}) Expected output is empty or invalid: "
-                    f"{output}"
-                )
+        return self._add_options(command)
 
     def postprocess_outputs(self) -> None:
         fasta_candidates = sorted(
@@ -137,49 +101,44 @@ class GetOrganelleRunner(BaseTool):
             self.output_dir.glob("*.selected_graph.gfa")
         )
 
-        if self.logger is not None:
-            self.logger.debug(
-                f"({self.tool_name}) FASTA candidates: "
-                f"{fasta_candidates}"
-            )
-            self.logger.debug(
-                f"({self.tool_name}) GFA candidates: "
-                f"{gfa_candidates}"
-            )
-
         if len(fasta_candidates) != 1:
             raise RuntimeError(
-                f"({self.tool_name}) Expected exactly one path_sequence "
-                f"FASTA in {self.output_dir}; found "
-                f"{len(fasta_candidates)}."
+                "Expected exactly one GetOrganelle path_sequence FASTA "
+                f"in {self.output_dir}; found {len(fasta_candidates)}."
             )
 
         if len(gfa_candidates) != 1:
             raise RuntimeError(
-                f"({self.tool_name}) Expected exactly one selected_graph GFA "
+                "Expected exactly one GetOrganelle selected_graph GFA "
                 f"in {self.output_dir}; found {len(gfa_candidates)}."
             )
 
         shutil.copy2(fasta_candidates[0], self.standardized_fasta)
         shutil.copy2(gfa_candidates[0], self.standardized_gfa)
 
-        if self.logger is not None:
-            self.logger.info(
-                f"({self.tool_name}) Wrote normalized FASTA: "
-                f"{self.standardized_fasta}"
-            )
-            self.logger.info(
-                f"({self.tool_name}) Wrote normalized GFA: "
-                f"{self.standardized_gfa}"
-            )
+        retained_names = {
+            self.standardized_fasta.name,
+            self.standardized_gfa.name,
+            "assembly.log",
+        }
 
-    def _expected_getorganelle_outputs(self) -> list[Path]:
-        return [self.standardized_fasta, self.standardized_gfa]
+        for child in self.output_dir.iterdir():
+            if child.name in retained_names:
+                continue
 
-    def _add_additional_getorganelle_args(
-        self,
-        command: list[str],
-    ) -> list[str]:
+            if child.is_dir():
+                shutil.rmtree(child)
+            else:
+                child.unlink()
+
+    def validate_outputs(self) -> None:
+        for path in (self.standardized_fasta, self.standardized_gfa):
+            if not path.is_file() or path.stat().st_size == 0:
+                raise FileNotFoundError(
+                    f"Missing or empty assembly output: {path}"
+                )
+
+    def _add_options(self, command: list[str]) -> list[str]:
         value_options = {
             "max_rounds": "-R",
             "kmer": "-k",
@@ -203,8 +162,8 @@ class GetOrganelleRunner(BaseTool):
             "disentangle_time_limit": "--disentangle-time-limit",
         }
 
-        for option_name, flag in value_options.items():
-            value = self.tool_options.get(option_name)
+        for key, flag in value_options.items():
+            value = self.tool_options.get(key)
             if value is not None:
                 command.extend([flag, str(value)])
 
@@ -218,8 +177,8 @@ class GetOrganelleRunner(BaseTool):
             "verbose": "--verbose",
         }
 
-        for option_name, flag in boolean_options.items():
-            if self.tool_options.get(option_name, False):
+        for key, flag in boolean_options.items():
+            if self.tool_options.get(key, False):
                 command.append(flag)
 
         return command

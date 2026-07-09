@@ -1,65 +1,40 @@
-"""Snakefile
-
-Top-level Snakemake orchestration for MitoPipeline.
-
-This Snakefile consumes the launcher-generated runtime manifest. Normal
-execution should use `python -m mitopipeline.launcher.pipeline_launcher`.
-"""
+"""Top-level Snakemake orchestration for MitoPipeline."""
 
 from pathlib import Path
 
 import pandas as pd
 
+
 wildcard_constraints:
-    sample = r"[^/]+"
+    sample=r"[^/]+"
+
 
 PROJECT_ROOT = Path(workflow.basedir).parent.resolve()
 SRC_DIR = PROJECT_ROOT / "src"
 
 shell.prefix(
-    f"export PYTHONPATH='{SRC_DIR}:$PYTHONPATH'; "
+    f'export PYTHONPATH="{SRC_DIR}:$PYTHONPATH"; '
 )
 
-OUTPUT_ROOT_VALUE = config.get(
-    "output_root"
-)
-
+OUTPUT_ROOT_VALUE = config.get("output_root")
 if not OUTPUT_ROOT_VALUE:
-    raise ValueError(
-        "'output_root' is required in the pipeline config."
-    )
+    raise ValueError("'output_root' is required in the pipeline config.")
 
-JOB_ID = config.get(
-    "job_id"
-)
-
+JOB_ID = config.get("job_id")
 if not JOB_ID:
     raise ValueError(
         "'job_id' is required in the runtime config. "
-        "Use the pipeline launcher to create a runtime config."
+        "Use the pipeline launcher."
     )
 
-OUTPUT_ROOT = Path(
-    OUTPUT_ROOT_VALUE
-)
-
-JOB_DIR = (
-    OUTPUT_ROOT
-    / JOB_ID
-)
-
-STAGES = config.get(
-    "stages",
-    {},
-)
+OUTPUT_ROOT = Path(OUTPUT_ROOT_VALUE)
+JOB_DIR = OUTPUT_ROOT / JOB_ID
+STAGES = config.get("stages", {})
 
 RUNTIME_MANIFEST_PATH = Path(
     config.get(
         "runtime_manifest",
-        config.get(
-            "manifest",
-            "",
-        ),
+        config.get("manifest", ""),
     )
 ).expanduser().resolve()
 
@@ -80,161 +55,61 @@ if "sample_id" not in SAMPLE_TABLE.columns:
         "Runtime manifest must include a sample_id column."
     )
 
-SAMPLE_TABLE = SAMPLE_TABLE.set_index(
-    "sample_id",
-    drop=False,
-)
-
+SAMPLE_TABLE = SAMPLE_TABLE.set_index("sample_id", drop=False)
 SAMPLES = SAMPLE_TABLE.index.tolist()
 
 
-def stage_enabled(
-        stage_name: str,
-) -> bool:
-    """Return whether a requested output stage is enabled."""
-    return bool(
-        STAGES.get(
-            stage_name,
-            False,
-        )
-    )
+def stage_enabled(stage_name: str) -> bool:
+    """Return whether a configured stage is enabled."""
+    return bool(STAGES.get(stage_name, False))
 
 
-def sample_targets(
-        directory: str,
-        filename: str,
-) -> list[str]:
-    """Expand one sample-level target for every sample."""
+def sample_target(stage: str, filename: str) -> list[str]:
+    """Expand one target inside every sample directory."""
     return expand(
-        str(
-            JOB_DIR
-            / directory
-            / filename
-        ),
+        str(JOB_DIR / stage / "{sample}" / filename),
         sample=SAMPLES,
     )
 
 
-def validate_stage_configuration() -> None:
-    """Validate relationships between requested output stages."""
-    if stage_enabled(
-        "pdf_export"
-    ) and not stage_enabled(
-        "reporting"
-    ):
-        raise ValueError(
-            "'pdf_export' requires 'reporting' to be enabled."
-        )
-
-    if stage_enabled(
-        "table2asn_validation"
-    ) and not stage_enabled(
-        "mitogenome_archival"
-    ):
-        raise ValueError(
-            "'table2asn_validation' requires "
-            "'mitogenome_archival' to be enabled."
-        )
-
-
 def enabled_targets() -> list[str]:
-    """Return final targets requested by stage configuration."""
+    """Return configured final targets."""
     targets: list[str] = []
 
     if stage_enabled("qc_raw"):
-        targets.extend(
-            sample_targets(
-                "qc/raw",
-                "{sample}.qc.raw.done",
-            )
-        )
+        targets.extend(sample_target("qc/raw", "qc_raw.done"))
 
     if stage_enabled("trimming"):
-        targets.extend(
-            sample_targets(
-                "trimming",
-                "{sample}.trimming.done",
-            )
-        )
+        targets.extend(sample_target("trimming", "trimming.done"))
 
     if stage_enabled("qc_trimmed"):
-        targets.extend(
-            sample_targets(
-                "qc/trimmed",
-                "{sample}.qc.trimmed.done",
-            )
-        )
+        targets.extend(sample_target("qc/trimmed", "qc_trimmed.done"))
 
     if stage_enabled("assembly"):
-        targets.extend(
-            sample_targets(
-                "assembly",
-                "{sample}.assembly.done",
-            )
-        )
+        targets.extend(sample_target("assembly", "assembly.done"))
 
     if stage_enabled("annotation"):
-        targets.extend(
-            sample_targets(
-                "annotation",
-                "{sample}.annotation.done",
-            )
-        )
+        targets.extend(sample_target("annotation", "annotation.done"))
 
     if stage_enabled("visualization"):
         targets.extend(
-            sample_targets(
-                "visualization",
-                "{sample}.visualization.done",
-            )
+            sample_target("visualization", "visualization.done")
         )
 
     if stage_enabled("phylogeny"):
-        targets.extend(
-            sample_targets(
-                "phylogeny/figures",
-                "{sample}.phylogeny.done",
-            )
-        )
+        targets.extend(sample_target("phylogeny", "phylogeny.done"))
 
     if stage_enabled("reporting"):
-        targets.extend(
-            sample_targets(
-                "reporting",
-                "{sample}.report.md",
-            )
-        )
-        targets.append(
-            str(
-                JOB_DIR
-                / "reporting"
-                / "run_report.md"
-            )
-        )
+        targets.extend(sample_target("reporting", "report.md"))
+        targets.append(str(JOB_DIR / "reporting" / "run" / "report.md"))
 
     if stage_enabled("pdf_export"):
-        targets.extend(
-            sample_targets(
-                "reporting",
-                "{sample}.report.pdf",
-            )
-        )
-        targets.append(
-            str(
-                JOB_DIR
-                / "reporting"
-                / "run_report.pdf"
-            )
-        )
+        targets.extend(sample_target("reporting", "report.pdf"))
+        targets.append(str(JOB_DIR / "reporting" / "run" / "report.pdf"))
 
     if stage_enabled("sra_archival"):
         targets.append(
-            str(
-                JOB_DIR
-                / "submission"
-                / "sra"
-                / "sra_metadata.tsv"
-            )
+            str(JOB_DIR / "submission" / "sra" / "sra_metadata.tsv")
         )
 
     if stage_enabled("biosample_archival"):
@@ -294,39 +169,26 @@ def enabled_targets() -> list[str]:
     return targets
 
 
-validate_stage_configuration()
-
-ENABLED_TARGETS = enabled_targets()
-
-
 rule all:
-    """Produce all configured pipeline outputs."""
-
     input:
-        ENABLED_TARGETS
+        enabled_targets()
 
 
 include: "rules/qc.raw.smk"
 include: "rules/trimming.smk"
 include: "rules/qc.trimmed.smk"
-
 include: "rules/getorganelle_config.smk"
 include: "rules/assembly.smk"
-
 include: "rules/mitos2_config.smk"
 include: "rules/annotation.smk"
-
 include: "rules/visualization.smk"
-
 include: "rules/blast_config.smk"
 include: "rules/blast.smk"
 include: "rules/blast_hits.smk"
 include: "rules/alignment_dataset.smk"
 include: "rules/phylogeny.smk"
-
 include: "rules/reporting.smk"
 include: "rules/report_pdf.smk"
-
 include: "rules/sra_archival.smk"
 include: "rules/biosample_archival.smk"
 include: "rules/mitogenome_archival.smk"

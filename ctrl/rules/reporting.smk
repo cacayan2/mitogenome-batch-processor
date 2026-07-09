@@ -1,88 +1,153 @@
-"""reporting.smk
+"""Per-sample and run-level Markdown reporting rules."""
 
-Generate per-sample Markdown reports and one run-level Markdown report.
-"""
-
-# Imports
 from pathlib import Path
 
 
 def reporting_dependencies(wildcards) -> list[str]:
-    """Return completion markers required by enabled stages."""
     dependencies = [str(RUNTIME_MANIFEST_PATH)]
 
     if stage_enabled("trimming"):
-        dependencies.append(str(JOB_DIR / "trimming" / f"{wildcards.sample}.trimming.done"))
+        dependencies.append(
+            str(
+                JOB_DIR
+                / "trimming"
+                / wildcards.sample
+                / "trimming.done"
+            )
+        )
 
     if stage_enabled("assembly"):
-        dependencies.append(str(JOB_DIR / "assembly" / f"{wildcards.sample}.assembly.done"))
+        dependencies.append(
+            str(
+                JOB_DIR
+                / "assembly"
+                / wildcards.sample
+                / "assembly.done"
+            )
+        )
 
     if stage_enabled("annotation"):
-        dependencies.append(str(JOB_DIR / "annotation" / f"{wildcards.sample}.annotation.done"))
+        dependencies.append(
+            str(
+                JOB_DIR
+                / "annotation"
+                / wildcards.sample
+                / "annotation.done"
+            )
+        )
 
     if stage_enabled("phylogeny"):
-        dependencies.append(str(JOB_DIR / "phylogeny" / "figures" / f"{wildcards.sample}.phylogeny.done"))
+        dependencies.append(
+            str(
+                JOB_DIR
+                / "phylogeny"
+                / wildcards.sample
+                / "phylogeny.done"
+            )
+        )
 
     return dependencies
 
 
 def enabled_stage_names_for_run_report() -> list[str]:
-    """Return stage names included in run-level status accounting."""
     stage_order = [
         "qc_raw",
         "trimming",
         "qc_trimmed",
         "assembly",
         "annotation",
+        "visualization",
         "phylogeny",
         "reporting",
     ]
-    return [stage_name for stage_name in stage_order if stage_enabled(stage_name)]
+    return [
+        stage
+        for stage in stage_order
+        if stage_enabled(stage)
+    ]
 
 
 rule reporting:
-    """Generate one Markdown report for one sample."""
     input:
         reporting_dependencies
+
     output:
-        report=str(JOB_DIR / "reporting" / "{sample}.report.md")
+        report=str(
+            JOB_DIR / "reporting" / "{sample}" / "report.md"
+        )
+
     params:
         job_directory=str(JOB_DIR),
-        log_file=str((Path.cwd() / JOB_DIR / "logs" / "reporting" / "{sample}.log").resolve())
+        log_file=str(
+            (
+                Path.cwd()
+                / JOB_DIR
+                / "reporting"
+                / "{sample}"
+                / "reporting.log"
+            ).resolve()
+        )
+
     conda:
         "../../envs/reporting.yaml"
+
     shell:
         """
-
         python -m mitopipeline.exec.generate_sample_report \
             --sample-id {wildcards.sample} \
-            --job-directory {params.job_directory} \
-            --output {output.report} \
-            --log-file {params.log_file}
+            --job-directory {params.job_directory:q} \
+            --output {output.report:q} \
+            --log-file {params.log_file:q}
+
+        test -s {output.report:q}
         """
 
 
 rule run_report:
-    """Generate one run-level Markdown report for the full job."""
     input:
-        sample_reports=expand(str(JOB_DIR / "reporting" / "{sample}.report.md"), sample=SAMPLES),
+        sample_reports=expand(
+            str(
+                JOB_DIR
+                / "reporting"
+                / "{sample}"
+                / "report.md"
+            ),
+            sample=SAMPLES,
+        ),
         runtime_manifest=str(RUNTIME_MANIFEST_PATH)
+
     output:
-        report=str(JOB_DIR / "reporting" / "run_report.md")
+        report=str(
+            JOB_DIR / "reporting" / "run" / "report.md"
+        )
+
     params:
         job_id=JOB_ID,
         job_directory=str(JOB_DIR),
-        enabled_stages=" ".join(enabled_stage_names_for_run_report()),
-        log_file=str((Path.cwd() / JOB_DIR / "logs" / "reporting" / "run_report.log").resolve())
+        enabled_stages=" ".join(
+            enabled_stage_names_for_run_report()
+        ),
+        log_file=str(
+            (
+                Path.cwd()
+                / JOB_DIR
+                / "reporting"
+                / "run"
+                / "reporting.log"
+            ).resolve()
+        )
+
     conda:
         "../../envs/reporting.yaml"
+
     shell:
         """
-
         python -m mitopipeline.exec.generate_run_report \
             --job-id {params.job_id} \
-            --job-directory {params.job_directory} \
+            --job-directory {params.job_directory:q} \
             --enabled-stages {params.enabled_stages} \
-            --output {output.report} \
-            --log-file {params.log_file}
+            --output {output.report:q} \
+            --log-file {params.log_file:q}
+
+        test -s {output.report:q}
         """

@@ -1,42 +1,26 @@
-"""report_pdf.smk
+"""Markdown-to-PDF reporting rules."""
 
-Convert Markdown reports to PDF using Pandoc with Typst.
-"""
-
-# Imports
 from pathlib import Path
 
 
-PDF_EXPORT_CONFIG = config.get(
-    "tools",
-    {},
-).get(
-    "pdf_export",
-    {},
+PDF_EXPORT_CONFIG = (
+    config.get("tools", {}).get("pdf_export", {})
 )
 
 
 rule sample_report_pdf:
-    """Convert one per-sample Markdown report to PDF."""
-
     input:
         markdown=str(
-            JOB_DIR
-            / "reporting"
-            / "{sample}.report.md"
+            JOB_DIR / "reporting" / "{sample}" / "report.md"
         )
 
     output:
         pdf=str(
-            JOB_DIR
-            / "reporting"
-            / "{sample}.report.pdf"
+            JOB_DIR / "reporting" / "{sample}" / "report.pdf"
         )
 
     params:
-        job_directory=str(
-            JOB_DIR
-        ),
+        job_directory=str(JOB_DIR),
         pandoc_bin=PDF_EXPORT_CONFIG.get(
             "pandoc_bin",
             "pandoc",
@@ -49,9 +33,9 @@ rule sample_report_pdf:
             (
                 Path.cwd()
                 / JOB_DIR
-                / "logs"
-                / "pdf_export"
-                / "{sample}.log"
+                / "reporting"
+                / "{sample}"
+                / "pdf_export.log"
             ).resolve()
         )
 
@@ -60,38 +44,31 @@ rule sample_report_pdf:
 
     shell:
         """
-
         python -m mitopipeline.exec.export_report_pdf \
-            --markdown {input.markdown} \
-            --pdf {output.pdf} \
-            --job-directory {params.job_directory} \
-            --pandoc-bin {params.pandoc_bin} \
-            --pdf-engine {params.pdf_engine} \
-            --log-file {params.log_file}
+            --markdown {input.markdown:q} \
+            --pdf {output.pdf:q} \
+            --job-directory {params.job_directory:q} \
+            --pandoc-bin {params.pandoc_bin:q} \
+            --pdf-engine {params.pdf_engine:q} \
+            --log-file {params.log_file:q}
+
+        test -s {output.pdf:q}
         """
 
 
 rule run_report_pdf:
-    """Convert the run-level Markdown report to PDF."""
-
     input:
         markdown=str(
-            JOB_DIR
-            / "reporting"
-            / "run_report.md"
+            JOB_DIR / "reporting" / "run" / "report.md"
         )
 
     output:
         pdf=str(
-            JOB_DIR
-            / "reporting"
-            / "run_report.pdf"
+            JOB_DIR / "reporting" / "run" / "report.pdf"
         )
 
     params:
-        job_directory=str(
-            JOB_DIR
-        ),
+        job_directory=str(JOB_DIR),
         pandoc_bin=PDF_EXPORT_CONFIG.get(
             "pandoc_bin",
             "pandoc",
@@ -104,9 +81,9 @@ rule run_report_pdf:
             (
                 Path.cwd()
                 / JOB_DIR
-                / "logs"
-                / "pdf_export"
-                / "run_report.log"
+                / "reporting"
+                / "run"
+                / "pdf_export.log"
             ).resolve()
         )
 
@@ -115,12 +92,13 @@ rule run_report_pdf:
 
     shell:
         """
-
         python -m mitopipeline.exec.export_report_pdf \
-            --markdown {input.markdown} \
-            --pdf {output.pdf} \
-            --job-directory {params.job_directory} \
-            --pandoc-bin {params.pandoc_bin} \
-            --pdf-engine {params.pdf_engine} \
-            --log-file {params.log_file}
+            --markdown {input.markdown:q} \
+            --pdf {output.pdf:q} \
+            --job-directory {params.job_directory:q} \
+            --pandoc-bin {params.pandoc_bin:q} \
+            --pdf-engine {params.pdf_engine:q} \
+            --log-file {params.log_file:q}
+
+        test -s {output.pdf:q}
         """

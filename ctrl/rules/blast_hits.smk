@@ -1,52 +1,25 @@
-"""blast_hits.smk
+"""Top BLAST-hit selection rule."""
 
-Contains rules for selecting top BLAST matches.
-"""
-
-# Imports
 from pathlib import Path
 
 
 rule select_blast_hits:
-    """Select the top six unique BLAST matches for each sample.
-    
-    Input:
-        blast_results: Path to BLAST TSV results.
-        blast_done: Path to BLAST done file.
-    
-    Output:
-        matches: Path to selected-hit TSV output.
-        done: Path to selected-hit done file.
-    """
-    # Inputs
     input:
         blast_results=str(
-            JOB_DIR
-            / "phylogeny"
-            / "blast"
-            / "{sample}.blast.tsv"
+            JOB_DIR / "phylogeny" / "{sample}" / "blast.tsv"
         ),
         blast_done=str(
-            JOB_DIR
-            / "phylogeny"
-            / "blast"
-            / "{sample}.blast.done"
+            JOB_DIR / "phylogeny" / "{sample}" / "blast.done"
         )
-    # Outputs
+
     output:
         matches=str(
-            JOB_DIR
-            / "phylogeny"
-            / "blast"
-            / "{sample}.top_hits.tsv"
+            JOB_DIR / "phylogeny" / "{sample}" / "top_hits.tsv"
         ),
         done=str(
-            JOB_DIR
-            / "phylogeny"
-            / "blast"
-            / "{sample}.top_hits.done"
+            JOB_DIR / "phylogeny" / "{sample}" / "top_hits.done"
         )
-    # Parameters
+
     params:
         maximum_matches=config["tools"]["blast"].get(
             "maximum_matches",
@@ -56,24 +29,24 @@ rule select_blast_hits:
             (
                 Path.cwd()
                 / JOB_DIR
-                / "logs"
-                / "blast_hits"
-                / "{sample}.log"
+                / "phylogeny"
+                / "{sample}"
+                / "top_hits.log"
             ).resolve()
         )
-    # Conda environment
+
     conda:
         "../../envs/mitopipeline.yaml"
-    # Shell script
+
     shell:
         """
-
         python -m mitopipeline.exec.parse_blast_hits \
             --sample-id {wildcards.sample} \
-            --blast-results {input.blast_results} \
-            --output-file {output.matches} \
+            --blast-results {input.blast_results:q} \
+            --output-file {output.matches:q} \
             --maximum-matches {params.maximum_matches} \
-            --log-file {params.log_file}
+            --log-file {params.log_file:q}
 
-        touch {output.done}
+        test -e {output.matches:q}
+        touch {output.done:q}
         """

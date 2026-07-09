@@ -4,24 +4,21 @@ from pathlib import Path
 
 
 def getorganelle_database_input(config):
-    """Return database setup dependency when initialization is enabled."""
-    getorganelle_config = config["tools"]["getorganelle"]
+    tool_config = config["tools"]["getorganelle"]
 
-    if getorganelle_config.get("initialize_database") is True:
-        database_type = getorganelle_config["database_type"]
+    if tool_config.get("initialize_database") is True:
         return str(
             JOB_DIR
             / "setup"
             / "getorganelle"
-            / f"{database_type}.done"
+            / f"{tool_config['database_type']}.done"
         )
 
     return []
 
 
 def getorganelle_optional_args(config):
-    """Build optional GetOrganelle CLI arguments."""
-    getorganelle_config = config["tools"]["getorganelle"]
+    tool_config = config["tools"]["getorganelle"]
     args = []
 
     value_options = {
@@ -48,7 +45,7 @@ def getorganelle_optional_args(config):
     }
 
     for key, flag in value_options.items():
-        value = getorganelle_config.get(key)
+        value = tool_config.get(key)
         if value is not None:
             args.append(f"{flag} {value}")
 
@@ -63,50 +60,41 @@ def getorganelle_optional_args(config):
     }
 
     for key, flag in boolean_options.items():
-        if getorganelle_config.get(key) is True:
+        if tool_config.get(key) is True:
             args.append(flag)
 
     return " ".join(args)
 
 
 rule assembly:
-    """Run mitochondrial genome assembly with GetOrganelle."""
-
     input:
         r1=str(
             JOB_DIR
             / "trimming"
-            / "{sample}_R1.trimmed.fastq.gz"
+            / "{sample}"
+            / "R1.trimmed.fastq.gz"
         ),
         r2=str(
             JOB_DIR
             / "trimming"
-            / "{sample}_R2.trimmed.fastq.gz"
+            / "{sample}"
+            / "R2.trimmed.fastq.gz"
         ),
         trimming_done=str(
-            JOB_DIR
-            / "trimming"
-            / "{sample}.trimming.done"
+            JOB_DIR / "trimming" / "{sample}" / "trimming.done"
         ),
-        getorganelle_db=getorganelle_database_input(config)
+        database_done=getorganelle_database_input(config)
 
     output:
-        fasta=str(JOB_DIR / "assembly" / "{sample}" / "{sample}.fasta"),
-        gfa=str(JOB_DIR / "assembly" / "{sample}" / "{sample}.gfa"),
-        done=str(
-            JOB_DIR
-            / "assembly"
-            / "{sample}.assembly.done"
-        )
+        fasta=str(JOB_DIR / "assembly" / "{sample}" / "data.fasta"),
+        gfa=str(JOB_DIR / "assembly" / "{sample}" / "graph.gfa"),
+        done=str(JOB_DIR / "assembly" / "{sample}" / "assembly.done")
 
     params:
-        output_dir=str(JOB_DIR / "assembly"),
+        output_dir=str(JOB_DIR / "assembly" / "{sample}"),
         working_dir=str(Path.cwd()),
         log_file=str(
-            JOB_DIR
-            / "logs"
-            / "assembly"
-            / "{sample}.log"
+            JOB_DIR / "assembly" / "{sample}" / "assembly.log"
         ),
         organelle_type=config["tools"]["getorganelle"][
             "database_type"
@@ -123,16 +111,16 @@ rule assembly:
         """
         python -m mitopipeline.exec.run_getorganelle \
             --sample-id {wildcards.sample} \
-            --in1 {input.r1} \
-            --in2 {input.r2} \
-            --output-dir {params.output_dir} \
-            --working-dir {params.working_dir} \
+            --in1 {input.r1:q} \
+            --in2 {input.r2:q} \
+            --output-dir {params.output_dir:q} \
+            --working-dir {params.working_dir:q} \
             --organelle-type {params.organelle_type} \
             --threads {threads} \
-            --log-file {params.log_file} \
+            --log-file {params.log_file:q} \
             {params.optional_args}
 
-        test -s {output.fasta}
-        test -s {output.gfa}
-        touch {output.done}
+        test -s {output.fasta:q}
+        test -s {output.gfa:q}
+        touch {output.done:q}
         """

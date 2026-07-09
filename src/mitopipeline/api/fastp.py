@@ -1,7 +1,4 @@
-"""fastp.py
-
-API wrapper for paired-end fastp trimming and filtering.
-"""
+"""API wrapper for paired-end fastp trimming."""
 
 from __future__ import annotations
 
@@ -14,7 +11,7 @@ from mitopipeline.models.sample import Sample
 
 
 class FastpRunner(BaseTool):
-    """Run fastp for one paired-end sample."""
+    """Run fastp for one sample."""
 
     def __init__(
         self,
@@ -38,68 +35,38 @@ class FastpRunner(BaseTool):
 
     @property
     def output_r1(self) -> Path:
-        return (
-            self.output_dir
-            / f"{self.sample.sample_id}_R1.trimmed.fastq.gz"
-        )
+        return self.output_dir / "R1.trimmed.fastq.gz"
 
     @property
     def output_r2(self) -> Path:
-        return (
-            self.output_dir
-            / f"{self.sample.sample_id}_R2.trimmed.fastq.gz"
-        )
+        return self.output_dir / "R2.trimmed.fastq.gz"
 
     @property
     def output_html(self) -> Path:
-        return (
-            self.output_dir
-            / f"{self.sample.sample_id}.fastp.html"
-        )
+        return self.output_dir / "fastp.html"
 
     @property
     def output_json(self) -> Path:
-        return (
-            self.output_dir
-            / f"{self.sample.sample_id}.fastp.json"
-        )
+        return self.output_dir / "fastp.json"
 
     def validate_inputs(self) -> None:
-        for read_path in (self.sample.r1, self.sample.r2):
-            if not read_path.exists() or not read_path.is_file():
+        for path in (self.sample.r1, self.sample.r2):
+            if not path.is_file():
                 raise FileNotFoundError(
-                    f"({self.tool_name}) Input FASTQ does not exist: "
-                    f"{read_path}"
+                    f"({self.tool_name}) Input file not found: {path}"
                 )
 
         if self.threads <= 0:
-            raise ValueError(
-                f"({self.tool_name}) Invalid thread count: {self.threads}."
-            )
+            raise ValueError("threads must be greater than zero.")
 
-        available_cpus = os.cpu_count()
-        if available_cpus is not None and self.threads > available_cpus:
+        cpus = os.cpu_count()
+        if cpus is not None and self.threads > cpus:
             raise ValueError(
-                f"({self.tool_name}) Threads exceed available CPUs: "
-                f"{self.threads} > {available_cpus}."
+                f"threads exceed available CPUs: {self.threads} > {cpus}"
             )
 
     def build_command(self) -> list[str]:
         self.output_dir.mkdir(parents=True, exist_ok=True)
-
-        if self.logger is not None:
-            self.logger.debug(
-                f"({self.tool_name}) Output R1: {self.output_r1}"
-            )
-            self.logger.debug(
-                f"({self.tool_name}) Output R2: {self.output_r2}"
-            )
-            self.logger.debug(
-                f"({self.tool_name}) HTML report: {self.output_html}"
-            )
-            self.logger.debug(
-                f"({self.tool_name}) JSON report: {self.output_json}"
-            )
 
         command = [
             "fastp",
@@ -119,33 +86,21 @@ class FastpRunner(BaseTool):
             str(self.threads),
         ]
 
-        return self._add_additional_fastp_args(command)
+        return self._add_options(command)
 
     def validate_outputs(self) -> None:
-        for expected_file in self._expected_fastp_outputs():
-            if not expected_file.exists():
-                raise FileNotFoundError(
-                    f"({self.tool_name}) Expected output missing: "
-                    f"{expected_file}"
-                )
-            if expected_file.stat().st_size == 0:
-                raise ValueError(
-                    f"({self.tool_name}) Expected output is empty: "
-                    f"{expected_file}"
-                )
-
-    def _expected_fastp_outputs(self) -> list[Path]:
-        return [
+        for path in (
             self.output_r1,
             self.output_r2,
             self.output_html,
             self.output_json,
-        ]
+        ):
+            if not path.is_file() or path.stat().st_size == 0:
+                raise FileNotFoundError(
+                    f"({self.tool_name}) Missing or empty output: {path}"
+                )
 
-    def _add_additional_fastp_args(
-        self,
-        command: list[str],
-    ) -> list[str]:
+    def _add_options(self, command: list[str]) -> list[str]:
         value_options = {
             "qualified_quality_phred": "--qualified_quality_phred",
             "length_required": "--length_required",
@@ -164,8 +119,8 @@ class FastpRunner(BaseTool):
             "adapter_fasta": "--adapter_fasta",
         }
 
-        for option_name, flag in value_options.items():
-            value = self.tool_options.get(option_name)
+        for key, flag in value_options.items():
+            value = self.tool_options.get(key)
             if value is not None:
                 command.extend([flag, str(value)])
 
@@ -181,8 +136,8 @@ class FastpRunner(BaseTool):
             "trim_poly_x": "--trim_poly_x",
         }
 
-        for option_name, flag in boolean_options.items():
-            if self.tool_options.get(option_name, False):
+        for key, flag in boolean_options.items():
+            if self.tool_options.get(key, False):
                 command.append(flag)
 
         return command
