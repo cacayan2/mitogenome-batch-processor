@@ -13,6 +13,7 @@ stages: # Select which stages to run (true/false) - mostly for debugging purpose
   annotation: true
   phylogeny: true
   reporting: true
+  pdf_export: true
 
 tools:
   fastp: # Options for fastp.
@@ -126,3 +127,6 @@ tools:
     random_seed: 12345 # Random seed for IQ-TREE
     render_dpi: 600 # DPI for IQ-TREE render
     midpoint_root_figure: true # Whether to use midpoint root for IQ-TREE render
+  pdf_export:
+    pandoc_bin: pandoc # Pandoc executable
+    pdf_engine: typst # PDF engine

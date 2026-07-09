@@ -175,6 +175,36 @@ def enabled_targets() -> list:
             )
         )
 
+        if stage_enabled(
+        "pdf_export"
+    ):
+        if not stage_enabled(
+            "reporting"
+        ):
+            raise ValueError(
+                "'pdf_export' requires the 'reporting' stage "
+                "to also be enabled."
+            )
+
+        targets.extend(
+            expand(
+                str(
+                    JOB_DIR
+                    / "reporting"
+                    / "{sample}.report.pdf"
+                ),
+                sample=SAMPLES,
+            )
+        )
+
+        targets.append(
+            str(
+                JOB_DIR
+                / "reporting"
+                / "run_report.pdf"
+            )
+        )
+
     return targets
 
 
@@ -229,3 +259,8 @@ if stage_enabled(
     "reporting"
 ):
     include: "rules/reporting.smk"
+
+if stage_enabled(
+    "pdf_export"
+):
+    include: "rules/report_pdf.smk"
