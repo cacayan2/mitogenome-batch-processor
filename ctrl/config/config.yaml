@@ -16,7 +16,7 @@ stages: # Select which stages to run (true/false) - mostly for debugging purpose
   pdf_export: true
   sra_archival: true
   biosample_archival: true
-  mitogenom_archival: true
+  mitogenome_archival: true
 
 tools:
   fastp: # Options for fastp.

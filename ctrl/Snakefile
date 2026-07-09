@@ -256,6 +256,23 @@ def enabled_targets() -> list[str]:
                 / "mitogenome_metadata.tsv"
             )
         )
+    if stage_enabled(
+        "archival_validation"
+    ):
+        targets.extend(
+            [
+                str(
+                    JOB_DIR
+                    / "submission"
+                    / "validation_summary.tsv"
+                ),
+                str(
+                    JOB_DIR
+                    / "submission"
+                    / "validation_report.md"
+                ),
+            ]
+        )
     return targets
 
 
@@ -293,3 +310,4 @@ include: "rules/report_pdf.smk"
 include: "rules/sra_archival.smk"
 include: "rules/biosample_archival.smk"
 include: "rules/mitogenome_archival.smk"
+include: "rules/archival_validation.smk"

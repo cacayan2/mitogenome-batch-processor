@@ -36,7 +36,7 @@ rule mitogenome_submission:
             / "mitogenomes"
         ),
         defaults_json=lambda wildcards: json.dumps(
-            MIGOTOGENOME_ARCHIVAL_CONFIG,
+            MITOGENOME_ARCHIVAL_CONFIG,
             separators=(",", ":"),
         ),
         mode=MITOGENOME_ARCHIVAL_CONFIG.get(
