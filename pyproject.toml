@@ -9,7 +9,9 @@ dependencies = [
     "openpyxl",
     "biopython",
     "matplotlib",
-    "pytest"
+    "pytest",
+    "pyyaml",
+    "snakemake",
 ]
 
 [tool.pytest.ini_options]
