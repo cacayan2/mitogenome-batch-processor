@@ -604,6 +604,8 @@ The pipeline implements a dedicated manifest parsing layer responsible for valid
 
 Rather than allowing individual workflow stages to interpret manifest files independently, all manifest processing is centralized within a single parser. This establishes a consistent interface between user-provided metadata and the remainder of the pipeline while ensuring that invalid or incomplete manifests are detected before computationally intensive analyses begin.
 
+**Addendum:** To add additional flexibility to this pipeline, the use of a manifest is not strictly enforced. While using a manifest 
+
 ## Justifications
 Separating sample metadata from workflow implementation improves flexibility by allowing the same pipeline to process arbitrary collections of sequencing datasets without requiring modifications to the underlying software. New projects can therefore be executed simply by providing a new manifest rather than editing workflow code or configuration files.
 
@@ -733,6 +735,8 @@ To provide biological validation of assembled genomes, each annotated mitochondr
 
 The resulting phylogenetic trees will provide an additional mechanism for evaluating assembly quality and confirming that assembled genomes cluster with taxonomically related species. 
 
+**Addendum:** Package management for `MEGA11` was found to be quite troublesome for the goals of this pipeline. `IQ-TREE` was found as a viable replacement.
+
 ## Justifications
 `MITOS2` was selected as the primary annotation platform because it supports fully local execution and can be integrated directly into an automated bioinformatics workflow. While the gold standard for annotation of fish mitochondrial genomes is `MitoAnnotator`, this and similar tools require submission to external web services. `MITOS2` enables reproducible large-scale processing while maintaining compatibility with automated pipeline execution.
 
@@ -743,6 +747,10 @@ Visualization was incorporated as a dedicated workflow stage to improve interpre
 Phylogenetic validation was selected as an additional quality assurance mechanism because assembly statistics alone cannot guarantee biological correctness. By comparing each assembled genome against related sequences available through NCBI, the pipeline can evaluate whether assemblies exhibit expected evolutionary relationships. Retrieving the six closest BLAST matches provides a representative set of related taxa while maintaining computational efficiency. Subsequent phylogenetic analysis in ` MEGA11` allows assembled genomes to be evaluated within an evolutionary context, providing an additional layer of confidence in assembly quality and species identification.
 
 The combination of annotation, visualization, and phylogenetic validation transforms assembled nucleotide sequences into biologically interpretable genomic resources suitable for biodiversity monitoring, mitochondrial reference database construction, and future environmental DNA applications. 
+
+**Addendum:** All tools involved in this pipeline were intended to be installed using a package manager - this takes full advantage of the automated `conda` environment management Snakemake offers. `MEGA11` is not recognized by package management and installation requires the download of an archive file (`.tar` or `.deb`) followed by extraction and installation. This breaks the modularity of each tool in the pipeline introducing a brand new tool installation paradigm not in line with other tools, reducing portability of the code. 
+
+`MEGA11` was originally selected due to previous implementations of similar tasks in the Stuart lab utilizing its use, but IQ-TREE excels not only for its ease of installation but is overwhelmingly preferred for computational speed, advanced statistical modeling, and accuracy. Since outputs of this pipeline are expected to become part of a potential scientific publication, IQ-TREE was chosen for its repuration of possessing significantly rigorous algorithmic design. 
 
 ---
 
@@ -810,6 +818,23 @@ The mitopipeline is intended to serve as a long-term research platform rather th
 To support long-term evolution of the project, the software architecture emphasizes modularity, abstraction, and separation of responsibilities throughout the workflow. Individual pipeline stages are implemented as independent components connected through well-defined interfaces, allowing new functionality to be integrated without requiring extensive modifications to the existing architecture. Workflow orchestration is delegated to [`Snakemake`](https://snakemake.readthedocs.io/), while external bioinformatics software is encapsulated through reusable Tool API classes, enabling new applications to be incorporated alongside existing implementations.
 
 The repository structure, configuration system, package organization, testing strategy, and dependency management were all designed with extensibility as a primary architectural objective, ensuring that the pipeline can evolve alongside future research requirements while maintaining software maintainability and reproducibility.
+
+**Addendum:** In addition to the aforementioned, future extensibility will be enforced via rigorous documentation. This project involves many different layers of somewhat difficult to digest material that spans many different areas of software engineering. 
+
+This includes but is not limited to: 
+
+* Workflow orchestration
+* Object oriented design
+* Data modeling and abstraction
+* Python package management
+
+To achieve this and future usability of included code, three layers of documentation are included in this repository:
+
+1. End-user instruction manual (installation and how-to-use the pipeline for raw datasets, alongside common troubleshooting issues)
+2. Developer manual (a step further than this document - explains in textbook-style the general structure of this pipeline, individual tools used, and resources recommended to better understand the content)
+3. This document an ADR to justify each decision made for this project
+
+All parties using this pipeline: users, developers, or even just enthusiasts, will have most of the tools required to use this pipeline to run on raw data or fork for development. 
 
 ## Justifications
 Designing the pipeline as a collection of modular and loosely coupled components minimizes the effort required to introduce new functionality. Additional workflow stages can be incorporated by implementing new execution wrappers, Tool API classes, configuration parameters, and Snakemake rules without requiring significant modifications to existing software components.
