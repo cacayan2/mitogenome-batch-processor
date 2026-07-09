@@ -1,74 +1,75 @@
-"""base_tool.py
+"""Shared execution behavior for external command-line tools."""
 
-This module contains base functionality for tool classes - this is abstract.
-"""
+from __future__ import annotations
 
-# Imports
 from abc import ABC, abstractmethod
-from mitopipeline.models.command_result import CommandResult
+from datetime import datetime
 from logging import Logger
 from pathlib import Path
-import time
-from datetime import datetime
+import shlex
 import subprocess
+import time
+
+from mitopipeline.models.command_result import CommandResult
+
 
 class BaseTool(ABC):
-    def __init__(self, tool_name: str, 
-                 working_dir: Path, 
-                 logger: Logger | None = None) -> None:
-        """
-        Initializes a BaseTool object.
+    """Base class for external command-line tool wrappers."""
 
-        Args:
-            tool_name (str): The name of the tool.
-            working_dir (Path): The working directory for the tool.
-            logger (Logger | None, optional): The logger to use. Defaults to None.
-
-        Returns:
-            None
-        """
+    def __init__(
+        self,
+        tool_name: str,
+        working_dir: Path,
+        logger: Logger | None = None,
+    ) -> None:
         self.tool_name = tool_name
-        self.working_dir = working_dir
+        self.working_dir = Path(working_dir)
         self.logger = logger
-        
+
     @abstractmethod
-    def validate_inputs(self):
-        """Validates the inputs for the tool. Must be implemented in objects that inherit this class."""
-        pass
+    def validate_inputs(self) -> None:
+        """Validate command inputs."""
 
     @abstractmethod
     def build_command(self) -> list[str]:
-        """Builds the command for the tool. Must be implemented in objects that inherit this class."""
-        pass
+        """Build the external command."""
 
     @abstractmethod
-    def validate_outputs(self):
-        """Validates the outputs for the tool. Must be implemented in objects that inherit this class."""
-        pass
+    def validate_outputs(self) -> None:
+        """Validate required command outputs."""
 
     def run(self) -> CommandResult:
-        """Runs the tool and returns a CommandResult object.
-        
-        Returns:
-            CommandResult: The result of running the tool.
-        """
+        """Execute the tool and return structured execution metadata."""
+        context = self._log_context()
 
-        # Validate inputs.
+        if self.logger is not None:
+            self.logger.info(
+                "%s Validating inputs.",
+                context,
+            )
+
         self.validate_inputs()
-
-        # Construct command.
         command = self.build_command()
 
-        # Time metadata.
         start_time = time.perf_counter()
         started_at = datetime.now()
 
         if self.logger is not None:
-            self.logger.info(f"({self.tool_name}) Starting execution.")
-            self.logger.debug(f"({self.tool_name}) Command: {command}")
-            self.logger.debug(f"({self.tool_name}) Working directory: {self.working_dir}")
+            self.logger.info(
+                "%s Starting execution.",
+                context,
+            )
+            self.logger.debug(
+                "%s Command: %s",
+                context,
+                shlex.join(command),
+            )
+            self.logger.debug(
+                "%s Working directory: %s",
+                context,
+                self.working_dir,
+            )
 
-        # Run command.
         completed = subprocess.run(
             command,
             cwd=self.working_dir,
@@ -76,16 +77,15 @@ class BaseTool(ABC):
             text=True,
         )
 
-        end_time = time.perf_counter()
+        runtime_seconds = time.perf_counter() - start_time
         ended_at = datetime.now()
 
-        # Build CommandResult.
         command_result = CommandResult(
             command=command,
             return_code=completed.returncode,
             stdout=completed.stdout,
             stderr=completed.stderr,
-            runtime_seconds=end_time - start_time,
+            runtime_seconds=runtime_seconds,
             success=completed.returncode == 0,
             tool_name=self.tool_name,
             started_at=started_at,
@@ -93,27 +93,61 @@ class BaseTool(ABC):
         )
 
         if self.logger is not None:
-            self.logger.info(f"({self.tool_name}) Execution finished with return code {command_result.return_code}.")
-            self.logger.debug(f"({self.tool_name}) Runtime seconds: {command_result.runtime_seconds}")
-            self.logger.debug(f"({self.tool_name}) stdout: {command_result.stdout}")
-            self.logger.debug(f"({self.tool_name}) stderr: {command_result.stderr}")
+            self.logger.info(
+                "%s Execution finished with return code %d "
+                "after %.2f seconds.",
+                context,
+                command_result.return_code,
+                command_result.runtime_seconds,
+            )
+            self.logger.debug(
+                "%s stdout:\n%s",
+                context,
+                command_result.stdout,
+            )
+            self.logger.debug(
+                "%s stderr:\n%s",
+                context,
+                command_result.stderr,
+            )
 
-        # If external tool failed, return result without validating outputs.
         if not command_result.success:
             if self.logger is not None:
-                self.logger.error(f"({self.tool_name}) Execution failed with return code {command_result.return_code}.")
+                self.logger.error(
+                    "%s External command failed.",
+                    context,
+                )
             return command_result
 
-        # Only validate outputs after successful execution.
+        if self.logger is not None:
+            self.logger.info(
+                "%s Normalizing and validating outputs.",
+                context,
+            )
+
         self.postprocess_outputs()
         self.validate_outputs()
 
+        if self.logger is not None:
+            self.logger.info(
+                "%s Completed successfully.",
+                context,
+            )
+
         return command_result
-    
+
     def postprocess_outputs(self) -> None:
-        """Optional hook executed after a successful command.
-        
-        Returns:
-            None
-        """
-        pass
+        """Optionally normalize outputs after successful execution."""
+
+    def _log_context(self) -> str:
+        """Return a tool-and-sample label for console messages."""
+        sample_id = getattr(self, "sample_id", None)
+
+        if sample_id is None:
+            sample = getattr(self, "sample", None)
+            sample_id = getattr(sample, "sample_id", None)
+
+        if sample_id:
+            return f"[{sample_id}] ({self.tool_name})"
+
+        return f"({self.tool_name})"

@@ -1,67 +1,54 @@
-"""logger_factory.py
+"""Create console and file loggers for MitoPipeline."""
 
-Given a logger name and a log file path, it returns a configgured logger.
+from __future__ import annotations
 
-"""
-
-# Imports
 import logging
 from pathlib import Path
 
-def make_logger(name: str, 
-                log_file_path: str | Path, 
-                console_level: int = logging.INFO,
-                file_level: int = logging.DEBUG) -> logging.Logger: 
-    """This function returns a configured logger object. It generates 
-    a file handler and a console handler and associates them with the logger.
-    Keep in mind: level DEBUG is only sent to the log file. All other levels
-    are sent to the terminal. 
 
-    Args:
-        name (str): The name of the logger.
-        log_file_path (str | Path): The path to the log file.
-        level (str): The level of the logger.
-        console_level (int, optional): The level of the console handler. Defaults to logging.INFO.
-        file_level (int, optional): The level of the file handler. Defaults to logging.DEBUG.
+def make_logger(
+    name: str,
+    log_file_path: str | Path,
+    console_level: int = logging.INFO,
+    file_level: int = logging.DEBUG,
+) -> logging.Logger:
+    """Return a logger with concise console and detailed file output.
 
-    Returns:
-        logger: A configured logger object.
+    A logger is keyed by both logical name and resolved logfile. This prevents
+    two samples using the same tool name from accidentally sharing a file
+    handler when they execute in the same Python process.
     """
+    log_file = Path(log_file_path).expanduser().resolve()
+    log_file.parent.mkdir(parents=True, exist_ok=True)
 
-    # Setting the log_file, creating a parent directory if necessary.
-    log_file = Path(log_file_path)
-    log_file.parent.mkdir(parents = True, exist_ok = True)
-
-    # Creating the logger object and setting the level. 
-    logger = logging.getLogger(name)
+    logger_name = f"{name}:{log_file}"
+    logger = logging.getLogger(logger_name)
     logger.setLevel(logging.DEBUG)
+    logger.propagate = False
 
-    # Prevent duplicate handlers if get_logger() is called multiple times.
     if logger.handlers:
         return logger
-    
-    # Our logger will write both to the terminal and to a logfile.
-    # This specifies what each of those will look like.
+
     console_formatter = logging.Formatter(
         "[%(levelname)s] %(message)s"
     )
     file_formatter = logging.Formatter(
-        "%(asctime)s | [%(levelname)s] | %(message)s | %(filename)s:%(lineno)d"
+        "%(asctime)s | [%(levelname)s] | %(message)s | "
+        "%(filename)s:%(lineno)d"
     )
 
-    # Creating the console handler and setting level and formatter.
     console_handler = logging.StreamHandler()
     console_handler.setLevel(console_level)
     console_handler.setFormatter(console_formatter)
 
-    # Creating the file handler and setting level and formatter.
-    file_handler = logging.FileHandler(log_file_path)
+    file_handler = logging.FileHandler(
+        log_file,
+        encoding="utf-8",
+    )
     file_handler.setLevel(file_level)
     file_handler.setFormatter(file_formatter)
 
-    # Assigning the handlers to the logger.
     logger.addHandler(console_handler)
     logger.addHandler(file_handler)
 
-    # Returning the logger.
     return logger
