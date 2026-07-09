@@ -29,6 +29,7 @@ rule circular_genome_map:
         fasta=str(
             JOB_DIR
             / "assembly"
+            / "{sample}"
             / "{sample}.fasta"
         ),
         annotation_done=str(

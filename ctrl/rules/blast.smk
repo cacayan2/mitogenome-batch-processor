@@ -69,6 +69,7 @@ rule blast_validation:
         query_fasta=str(
             JOB_DIR
             / "assembly"
+            / "{sample}"
             / "{sample}.fasta"
         ),
         assembly_done=str(

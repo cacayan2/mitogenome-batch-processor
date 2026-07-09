@@ -25,6 +25,7 @@ rule generate_alignment_dataset:
         assembly_fasta=str(
             JOB_DIR
             / "assembly"
+            / "{sample}"
             / "{sample}.fasta"
         ),
         assembly_done=str(
