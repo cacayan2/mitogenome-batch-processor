@@ -335,7 +335,7 @@ def collect_sample_report_data(
             logger=logger,
         )
 
-    visualization_stats = map_data.to_dict()
+        visualization_stats = map_data.to_dict()
 
     blast_matches = None
 
