@@ -26,7 +26,6 @@ rule setup_mitos2:
 
     shell:
         """
-        python -m pip install -e . --quiet
 
         python -m mitopipeline.utils.setup_mitos2_env \
             --env-name {params.env_name} \

@@ -178,6 +178,7 @@ def build_pandoc_command(
             markdown_path=markdown_path,
             job_directory=job_directory,
         ),
+        "margin=0.5in",
         "--output",
         str(pdf_path),
     ]

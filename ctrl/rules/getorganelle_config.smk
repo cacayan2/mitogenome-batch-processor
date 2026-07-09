@@ -24,7 +24,6 @@ rule getorganelle_config:
     # Shell script for running getorganelle database setup.
     shell:
         """
-        python -m pip install -e . --quiet
 
         python -m mitopipeline.utils.setup_getorganelle_database \
             --database-type {wildcards.database_type} \

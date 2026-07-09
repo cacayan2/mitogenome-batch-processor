@@ -53,7 +53,6 @@ rule reporting:
         "../../envs/reporting.yaml"
     shell:
         """
-        python -m pip install -e . --quiet
 
         python -m mitopipeline.exec.generate_sample_report \
             --sample-id {wildcards.sample} \
@@ -79,7 +78,6 @@ rule run_report:
         "../../envs/reporting.yaml"
     shell:
         """
-        python -m pip install -e . --quiet
 
         python -m mitopipeline.exec.generate_run_report \
             --job-id {params.job_id} \

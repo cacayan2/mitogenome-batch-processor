@@ -96,7 +96,6 @@ rule trimming:
     # Shell script for running fastp through the execution layer.
     shell:
         """
-        python -m pip install -e . --quiet
 
         python -m mitopipeline.exec.run_fastp \
             --sample-id {wildcards.sample} \

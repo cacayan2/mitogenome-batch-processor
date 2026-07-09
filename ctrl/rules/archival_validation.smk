@@ -43,7 +43,6 @@ rule archival_validation:
 
     shell:
         r"""
-        python -m pip install -e . --quiet
 
         python -m mitopipeline.exec.validate_archival_submission \
             --runtime-manifest {input.runtime_manifest:q} \

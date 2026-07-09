@@ -128,7 +128,6 @@ rule blast_validation:
     # Run BLAST
     shell:
         """
-        python -m pip install -e . --quiet
 
         python -m mitopipeline.exec.run_blast \
             --sample-id {wildcards.sample} \

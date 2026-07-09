@@ -3,13 +3,11 @@
 Normalized configuration model for BLAST execution and database setup.
 """
 
-# Imports
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
 
-# Constants
 VALID_BLAST_MODES = {
     "local",
     "remote",
@@ -23,11 +21,7 @@ VALID_DATABASE_SOURCES = {
 
 @dataclass(frozen=True)
 class BlastConfig:
-    """Normalized BLAST configuration.
-
-    All supported BLAST modes use the same configuration fields. Fields that
-    are irrelevant to the selected mode remain present but are ignored.
-    """
+    """Normalized BLAST configuration."""
 
     mode: str
     database_source: str
@@ -53,26 +47,27 @@ class BlastConfig:
     word_size: int | None
     output_format: str
 
+    entrez_email: str | None
+    entrez_api_key: str | None
+    ncbi_query: str
+    ncbi_max_records: int
+    ncbi_batch_size: int
+
     @classmethod
     def from_mapping(
         cls,
         config: Mapping[str, Any],
     ) -> "BlastConfig":
-        """Create normalized BLAST configuration from a mapping.
-
-        Args:
-            config (Mapping[str, Any]): BLAST subsection of config.yaml.
-
-        Returns:
-            BlastConfig: Validated BLAST configuration.
-        """
+        """Create normalized BLAST configuration from a mapping."""
         instance = cls(
-            mode=str(config.get("mode", "local")),
+            mode=str(
+                config.get("mode", "local")
+            ),
             database_source=str(
                 config.get("database_source", "ncbi")
             ),
             database_name=str(
-                config.get("database_name", "refseq_genomic")
+                config.get("database_name", "mitopipeline_mt_refs")
             ),
             database_dir=Path(
                 config.get("database_dir", "resources/blast")
@@ -98,9 +93,15 @@ class BlastConfig:
             parse_seqids=bool(
                 config.get("parse_seqids", True)
             ),
-            threads=int(config.get("threads", 4)),
-            task=str(config.get("task", "blastn")),
-            evalue=float(config.get("evalue", 1e-5)),
+            threads=int(
+                config.get("threads", 4)
+            ),
+            task=str(
+                config.get("task", "blastn")
+            ),
+            evalue=float(
+                config.get("evalue", 1e-5)
+            ),
             max_target_seqs=int(
                 config.get("max_target_seqs", 50)
             ),
@@ -136,6 +137,31 @@ class BlastConfig:
                         "staxids sscinames stitle"
                     ),
                 )
+            ),
+            entrez_email=(
+                None
+                if config.get("entrez_email") in (None, "")
+                else str(config["entrez_email"])
+            ),
+            entrez_api_key=(
+                None
+                if config.get("entrez_api_key") in (None, "")
+                else str(config["entrez_api_key"])
+            ),
+            ncbi_query=str(
+                config.get(
+                    "ncbi_query",
+                    (
+                        'mitochondrion[filter] AND refseq[filter] '
+                        'AND "complete genome"[Title]'
+                    ),
+                )
+            ),
+            ncbi_max_records=int(
+                config.get("ncbi_max_records", 250)
+            ),
+            ncbi_batch_size=int(
+                config.get("ncbi_batch_size", 50)
             ),
         )
 
@@ -209,26 +235,36 @@ class BlastConfig:
                 "BLAST word_size must be greater than zero."
             )
 
+        if self.ncbi_max_records <= 0:
+            raise ValueError(
+                "BLAST ncbi_max_records must be greater than zero."
+            )
+
+        if self.ncbi_batch_size <= 0:
+            raise ValueError(
+                "BLAST ncbi_batch_size must be greater than zero."
+            )
+
+        if self.uses_ncbi_download and not self.entrez_email:
+            raise ValueError(
+                "Local NCBI mitochondrial reference download requires "
+                "tools.blast.entrez_email."
+            )
+
     @property
     def database_prefix(self) -> Path:
-        """Return derived local database prefix.
-
-        Returns:
-            Path: Local database prefix.
-        """
+        """Return derived local database prefix."""
         return self.database_dir / self.database_name
 
     @property
     def database_argument(self) -> str:
-        """Return value passed to blastn -db.
-
-        Returns:
-            str: NCBI database name for remote mode or local database prefix.
-        """
+        """Return value passed to blastn -db."""
         if self.mode == "remote":
             return self.database_name
 
-        return str(self.database_prefix.resolve())
+        return str(
+            self.database_prefix.resolve()
+        )
 
     @property
     def requires_database_setup(self) -> bool:
@@ -240,7 +276,7 @@ class BlastConfig:
 
     @property
     def uses_ncbi_download(self) -> bool:
-        """Return whether local NCBI database download is selected."""
+        """Return whether local NCBI reference FASTA download is selected."""
         return (
             self.mode == "local"
             and self.database_source == "ncbi"

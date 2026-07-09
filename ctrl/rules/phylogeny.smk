@@ -76,7 +76,6 @@ rule align_phylogeny_dataset:
 
     shell:
         """
-        python -m pip install -e . --quiet
 
         python -m mitopipeline.exec.run_phylogeny_alignment \
             --sample-id {wildcards.sample} \
@@ -191,7 +190,6 @@ rule infer_phylogeny:
 
     shell:
         """
-        python -m pip install -e . --quiet
 
         python -m mitopipeline.exec.run_iqtree \
             --sample-id {wildcards.sample} \
@@ -301,7 +299,6 @@ rule render_phylogenetic_tree:
 
     shell:
         """
-        python -m pip install -e . --quiet
 
         python -m mitopipeline.exec.render_phylogeny \
             --sample-id {wildcards.sample} \

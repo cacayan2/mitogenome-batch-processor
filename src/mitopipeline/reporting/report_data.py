@@ -121,8 +121,7 @@ def build_output_paths(
     return {
         "runtime_manifest": (
             job_directory
-            / "metadata"
-            / "runtime_manifest.tsv"
+            / "validated_samples.tsv"
         ),
         "fastp_json": (
             job_directory
@@ -318,24 +317,23 @@ def collect_sample_report_data(
         / "result.gff"
     )
 
-    annotation_fasta = (
-        paths["annotation_directory"]
-        / "result.fas"
+    assembly_fasta = (
+        paths["assembly_fasta"]
     )
 
     if (
         annotation_gff.exists()
-        and annotation_fasta.exists()
+        and assembly_fasta.exists()
         and paths["visualization_done"].exists()
     ):
         map_data = build_circular_map_data(
             sample_id=sample_id,
             gff_path=annotation_gff,
-            fasta_path=annotation_fasta,
+            fasta_path=assembly_fasta,
             logger=logger,
         )
 
-        visualization_stats = map_data.to_dict()
+    visualization_stats = map_data.to_dict()
 
     blast_matches = None
 

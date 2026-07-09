@@ -43,7 +43,6 @@ rule qc_trimmed:
     # Shell commands.
     shell:
         """
-        python -m pip install -e . --quiet
 
         python -m mitopipeline.exec.run_fastqc_trimmed \
             --sample-id {wildcards.sample} \

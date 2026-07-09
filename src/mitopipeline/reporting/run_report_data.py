@@ -181,7 +181,7 @@ def build_run_output_paths(job_directory: str | Path) -> dict[str, Path]:
     """Build known run-level output paths."""
     job_directory = Path(job_directory)
     return {
-        "runtime_manifest": job_directory / "metadata" / "runtime_manifest.tsv",
+        "runtime_manifest": job_directory / "validated_samples.tsv",
         "run_report": job_directory / "reporting" / "run_report.md",
         "reporting_directory": job_directory / "reporting",
         "logs_directory": job_directory / "logs",

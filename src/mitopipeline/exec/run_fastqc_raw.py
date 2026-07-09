@@ -84,6 +84,7 @@ def main() -> int:
             working_dir = Path(args.working_dir), 
             logger = logger,
             threads = args.threads,
+            tool_name = "fastqc.raw"
         )
 
         # Running FastQC and obtaining CommandResult.

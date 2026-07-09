@@ -88,7 +88,6 @@ rule generate_alignment_dataset:
     # Execution
     shell:
         """
-        python -m pip install -e . --quiet
 
         python -m mitopipeline.exec.generate_alignment_dataset \
             --sample-id {wildcards.sample} \

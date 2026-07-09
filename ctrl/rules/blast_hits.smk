@@ -67,7 +67,6 @@ rule select_blast_hits:
     # Shell script
     shell:
         """
-        python -m pip install -e . --quiet
 
         python -m mitopipeline.exec.parse_blast_hits \
             --sample-id {wildcards.sample} \

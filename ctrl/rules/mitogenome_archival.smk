@@ -55,7 +55,6 @@ rule mitogenome_submission:
 
     shell:
         r"""
-        python -m pip install -e . --quiet
 
         python -m mitopipeline.exec.prepare_mitogenome_submission \
             --runtime-manifest {input.runtime_manifest:q} \

@@ -46,7 +46,6 @@ rule sra_metadata:
 
     shell:
         r"""
-        python -m pip install -e . --quiet
 
         python -m mitopipeline.exec.generate_sra_metadata \
             --runtime-manifest {input.runtime_manifest:q} \

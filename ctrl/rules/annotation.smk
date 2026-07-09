@@ -41,7 +41,6 @@ rule annotation:
 
     shell:
         """
-        python -m pip install -e . --quiet
 
         python -m mitopipeline.exec.run_mitos2 \
             --conda-env {params.conda_env} \

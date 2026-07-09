@@ -28,9 +28,8 @@ rule circular_genome_map:
         ),
         fasta=str(
             JOB_DIR
-            / "annotation"
-            / "{sample}"
-            / "result.fas"
+            / "assembly"
+            / "{sample}.fasta"
         ),
         annotation_done=str(
             JOB_DIR
@@ -80,7 +79,6 @@ rule circular_genome_map:
 
     shell:
         """
-        python -m pip install -e . --quiet
 
         python -m mitopipeline.exec.generate_circular_genome_map \
             --sample-id {wildcards.sample} \

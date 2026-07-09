@@ -9,6 +9,8 @@ tests/fixtures/fastq_real/
 tests/fixtures/sra_cache/
 tests/fixtures/logs/
 fasterq.tmp.*/
-resources/mitos/
 tests/fixtures/blast/
 *Zone.Identifier
+outputs/
+resources/
+tests/fixtures/common_carp_001/

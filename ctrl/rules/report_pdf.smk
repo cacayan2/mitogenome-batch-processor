@@ -60,7 +60,6 @@ rule sample_report_pdf:
 
     shell:
         """
-        python -m pip install -e . --quiet
 
         python -m mitopipeline.exec.export_report_pdf \
             --markdown {input.markdown} \
@@ -116,7 +115,6 @@ rule run_report_pdf:
 
     shell:
         """
-        python -m pip install -e . --quiet
 
         python -m mitopipeline.exec.export_report_pdf \
             --markdown {input.markdown} \

@@ -43,7 +43,6 @@ rule qc_raw:
     # Shell commands.
     shell:
         """
-        python -m pip install -e . --quiet
 
         python -m mitopipeline.exec.run_fastqc_raw \
             --sample-id {wildcards.sample} \
