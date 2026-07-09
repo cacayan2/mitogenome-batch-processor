@@ -1,7 +1,7 @@
 output_root: outputs
-manifest: data/Manifest_260706.tsv
-input_directory: data/fastq
-job_id: run_May2026
+manifest: tests/fixtures/manifests/common_carp_only.tsv
+input_directory: tests/fixtures/fastq_real/common_carp_001
+job_id: common_carp_only
 validate_input_files: true
 
 stages: # Select which stages to run (true/false) - mostly for debugging purposes.
@@ -16,6 +16,7 @@ stages: # Select which stages to run (true/false) - mostly for debugging purpose
   pdf_export: true
   sra_archival: true
   biosample_archival: true
+  mitogenom_archival: true
 
 tools:
   fastp: # Options for fastp.
@@ -153,3 +154,10 @@ archival:
     lat_lon: null
     sample_type: environmental sample
     description_template: "Biological sample for {sample_id}."
+    mitogenome:
+    molecule_type: DNA
+    genome_location: mitochondrion
+    topology: circular
+    assembly_method: GetOrganelle
+    annotation_method: MITOS2
+    file_mode: copy

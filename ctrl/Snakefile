@@ -245,7 +245,17 @@ def enabled_targets() -> list[str]:
                 / "biosample_metadata.tsv"
             )
         )
-
+    if stage_enabled(
+        "mitogenome_archival"
+    ):
+        targets.append(
+            str(
+                JOB_DIR
+                / "submission"
+                / "mitogenomes"
+                / "mitogenome_metadata.tsv"
+            )
+        )
     return targets
 
 
@@ -282,3 +292,4 @@ include: "rules/report_pdf.smk"
 
 include: "rules/sra_archival.smk"
 include: "rules/biosample_archival.smk"
+include: "rules/mitogenome_archival.smk"

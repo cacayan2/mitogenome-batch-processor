@@ -30,7 +30,7 @@ rule biosample_metadata:
         )
 
     params:
-        defaults_json=json.dumps(
+        defaults_json=lambda wildcards: json.dumps(
             BIOSAMPLE_CONFIG,
             separators=(",", ":"),
         ),

@@ -16,7 +16,9 @@ rule annotation:
         mitos2_done=str(JOB_DIR / "setup" / "mitos2" / "mitos2.done")
 
     output:
-        done=str(JOB_DIR / "annotation" / "{sample}.annotation.done")
+        done=str(JOB_DIR / "annotation" / "{sample}.annotation.done"),
+        gff=str(JOB_DIR / "annotation" / "{sample}" / "result.gff"),
+        fasta=str(JOB_DIR / "annotation" / "{sample}" / "result.fas")
 
     params:
         output_dir=str((Path.cwd() / JOB_DIR / "annotation" / "{sample}").resolve()),

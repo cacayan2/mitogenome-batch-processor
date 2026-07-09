@@ -30,7 +30,7 @@ rule sra_metadata:
         )
 
     params:
-        defaults_json=json.dumps(
+        defaults_json=lambda wildcards: json.dumps(
             SRA_CONFIG,
             separators=(",", ":"),
         ),

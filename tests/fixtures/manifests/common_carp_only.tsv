@@ -1,0 +1,2 @@
+sample_id	genus	species	source	r1	r2
+common_carp_001	Cyprinus	carpio	SRA	common_carp_001_R1.fastq.gz	common_carp_001_R2.fastq.gz
