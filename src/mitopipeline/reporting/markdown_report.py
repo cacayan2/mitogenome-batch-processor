@@ -505,6 +505,106 @@ def render_blast_section(
         "",
     ]
 
+def render_visualization_section(
+        report_data: SampleReportData,
+        report_path: Path,
+) -> list[str]:
+    """Render circular mitochondrial genome visualization outputs."""
+    stats = report_data.visualization_stats
+    paths = report_data.output_paths
+
+    lines = [
+        "## Circular mitochondrial genome map",
+        "",
+    ]
+
+    links = [
+        link
+        for link in [
+            file_link(
+                "PNG circular map",
+                paths["visualization_png"],
+                report_path,
+            ),
+            file_link(
+                "SVG circular map",
+                paths["visualization_svg"],
+                report_path,
+            ),
+            file_link(
+                "PDF circular map",
+                paths["visualization_pdf"],
+                report_path,
+            ),
+        ]
+        if link is not None
+    ]
+
+    if not links:
+        return [
+            *lines,
+            "_Circular genome visualization was not available._",
+            "",
+        ]
+
+    if stats is not None:
+        lines.extend(
+            [
+                markdown_table(
+                    headers=[
+                        "Metric",
+                        "Value",
+                    ],
+                    rows=[
+                        [
+                            "Genome length",
+                            f"{format_integer(stats['genome_length'])} bp",
+                        ],
+                        [
+                            "GC content",
+                            format_percent(
+                                stats["gc_content_percent"]
+                            ),
+                        ],
+                        [
+                            "Drawable features",
+                            format_integer(
+                                len(stats["features"])
+                            ),
+                        ],
+                    ],
+                ),
+                "",
+            ]
+        )
+
+    lines.extend(
+        [
+            "- " + "\n- ".join(
+                links
+            ),
+            "",
+        ]
+    )
+
+    if paths[
+        "visualization_png"
+    ].exists():
+        image_path = relative_path(
+            paths["visualization_png"],
+            report_path,
+        )
+
+        lines.extend(
+            [
+                "### Circular mitogenome map",
+                "",
+                f"![Circular mitochondrial genome map]({image_path})",
+                "",
+            ]
+        )
+
+    return lines
 
 def render_phylogeny_section(
         report_data: SampleReportData,
@@ -625,6 +725,9 @@ def render_output_section(
         "fastp_html": "fastp HTML report",
         "fastp_json": "fastp JSON output",
         "assembly_fasta": "Assembly FASTA",
+        "visualization_png": "Circular genome map PNG",
+        "visualization_svg": "Circular genome map SVG",
+        "visualization_pdf": "Circular genome map PDF",
         "blast_top_hits": "Ranked BLAST matches",
         "alignment_fasta": "Aligned FASTA",
         "iqtree_report": "IQ-TREE report",
@@ -719,7 +822,7 @@ def render_sample_report(
     species = format_scientific_name(
     report_data.metadata
     )
-    
+
     generated_at = datetime.now(
         timezone.utc
     ).isoformat(
@@ -746,6 +849,16 @@ def render_sample_report(
             report_data
         ),
         *render_annotation_section(
+            report_data
+        ),
+        *render_annotation_section(
+            report_data
+        ),
+        *render_visualization_section(
+            report_data,
+            report_path,
+        ),
+        *render_blast_section(
             report_data
         ),
         *render_blast_section(

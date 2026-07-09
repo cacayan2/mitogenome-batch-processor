@@ -14,6 +14,9 @@ from mitopipeline.models.report_data import (
 from mitopipeline.stats.annotation_stats import (
     parse_annotation_stats,
 )
+from mitopipeline.stats.visualization_stats import (
+    build_circular_map_data,
+)
 from mitopipeline.stats.assembly_stats import (
     parse_assembly_stats,
 )
@@ -27,6 +30,7 @@ from mitopipeline.stats.phylogeny_stats import (
     parse_iqtree_model,
     validate_newick_tree,
 )
+
 
 
 def read_sample_metadata(
@@ -139,6 +143,26 @@ def build_output_paths(
             job_directory
             / "annotation"
             / sample_id
+        ),
+        "visualization_png": (
+            job_directory
+            / "visualization"
+            / f"{sample_id}.circular_mitogenome.png"
+        ),
+        "visualization_svg": (
+            job_directory
+            / "visualization"
+            / f"{sample_id}.circular_mitogenome.svg"
+        ),
+        "visualization_pdf": (
+            job_directory
+            / "visualization"
+            / f"{sample_id}.circular_mitogenome.pdf"
+        ),
+        "visualization_done": (
+            job_directory
+            / "visualization"
+            / f"{sample_id}.visualization.done"
         ),
         "blast_top_hits": (
             job_directory
@@ -287,6 +311,32 @@ def collect_sample_report_data(
                     f"GFF was found for {sample_id}."
                 )
 
+    visualization_stats = None
+
+    annotation_gff = (
+        paths["annotation_directory"]
+        / "result.gff"
+    )
+
+    annotation_fasta = (
+        paths["annotation_directory"]
+        / "result.fas"
+    )
+
+    if (
+        annotation_gff.exists()
+        and annotation_fasta.exists()
+        and paths["visualization_done"].exists()
+    ):
+        map_data = build_circular_map_data(
+            sample_id=sample_id,
+            gff_path=annotation_gff,
+            fasta_path=annotation_fasta,
+            logger=logger,
+        )
+
+    visualization_stats = map_data.to_dict()
+
     blast_matches = None
 
     if paths[
@@ -334,6 +384,7 @@ def collect_sample_report_data(
         fastp_stats=fastp_stats,
         assembly_stats=assembly_stats,
         annotation_stats=annotation_stats,
+        visualization_stats=visualization_stats,
         blast_matches=blast_matches,
         phylogeny_model=phylogeny_model,
         phylogeny_tip_count=phylogeny_tip_count,

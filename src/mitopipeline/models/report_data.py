@@ -18,6 +18,7 @@ class SampleReportData:
     fastp_stats: dict[str, Any] | None
     assembly_stats: dict[str, Any] | None
     annotation_stats: dict[str, Any] | None
+    visualization_stats: dict[str, Any] | None
     blast_matches: list[dict] | None
     phylogeny_model: str | None
     phylogeny_tip_count: int | None

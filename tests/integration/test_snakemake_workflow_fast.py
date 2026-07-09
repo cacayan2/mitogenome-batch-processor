@@ -39,6 +39,7 @@ def test_snakemake_dry_run():
         assert "rule qc_trimmed" in result.stdout
         assert "rule assembly" in result.stdout
         assert "rule annotation" in result.stdout
+        assert "rule circular_genome_map" in result.stdout
         assert "rule blast" in result.stdout
         assert "rule select_blast_hits" in result.stdout
         assert "rule generate_alignment_dataset" in result.stdout
