@@ -167,6 +167,7 @@ def build_pandoc_command(
     command = [
         pandoc_bin,
         str(markdown_path),
+        "--standalone",
         "--from",
         "gfm",
         "--to",
@@ -178,7 +179,11 @@ def build_pandoc_command(
             markdown_path=markdown_path,
             job_directory=job_directory,
         ),
-        "margin=0.5in",
+        # Pass individual margins to prevent the Pandoc template bug
+        "--variable", "margin-top=0.5in",
+        "--variable", "margin-bottom=0.5in",
+        "--variable", "margin-left=0.5in",
+        "--variable", "margin-right=0.5in",
         "--output",
         str(pdf_path),
     ]
