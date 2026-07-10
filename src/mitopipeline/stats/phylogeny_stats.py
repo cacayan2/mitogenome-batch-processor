@@ -258,27 +258,25 @@ def validate_newick_tree(
 
 
 def format_tree_label(
-        identifier: str,
+    identifier: str,
 ) -> str:
-    """Convert a pipeline FASTA identifier into a figure label.
-
-    Args:
-        identifier (str): Pipeline sequence identifier.
-
-    Returns:
-        str: Human-readable tree label.
-    """
+    """Convert a pipeline FASTA identifier into a figure label."""
     parts = identifier.split("|")
 
     if len(parts) >= 2 and parts[-1] == "assembled":
         sample_name = parts[0].replace("_", " ")
-
         return f"{sample_name} (assembly)"
 
+    # Species_name|accession|reference_01
+    if len(parts) >= 3 and parts[-1].startswith("reference_"):
+        species_name = parts[0].replace("_", " ")
+        accession = parts[1]
+        return f"{species_name} [{accession}]"
+
+    # Legacy format: reference_01|accession|Species_name
     if len(parts) >= 3 and parts[0].startswith("reference_"):
         accession = parts[1]
         species_name = parts[2].replace("_", " ")
-
         return f"{species_name} [{accession}]"
 
     return identifier.replace("_", " ")
