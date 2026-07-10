@@ -11,6 +11,7 @@ from typing import Callable, TextIO
 from Bio import Entrez, SeqIO
 from Bio.SeqRecord import SeqRecord
 
+<<<<<<< HEAD
 def infer_scientific_name_from_record(
     record: SeqRecord,
     accession: str,
@@ -32,6 +33,8 @@ def infer_scientific_name_from_record(
         return "unknown_species"
 
     return f"{match.group(1)} {match.group(2)}"
+=======
+>>>>>>> 2dbd31d19b93d6cf32530c7dd83f07fd45eed98a
 
 def parse_top_blast_hits(
     top_hits_path: str | Path,
@@ -250,6 +253,7 @@ def order_and_standardize_reference_sequences(
             )
 
         record = record[:]
+<<<<<<< HEAD
         scientific_name = (
             match.get("sscinames")
             or ""
@@ -270,6 +274,9 @@ def order_and_standardize_reference_sequences(
                 record=record,
                 accession=accession,
             )
+=======
+        scientific_name = match.get("sscinames") or "unknown_species"
+>>>>>>> 2dbd31d19b93d6cf32530c7dd83f07fd45eed98a
         record.id = build_reference_sequence_name(
             rank=match["rank"],
             accession=accession,
