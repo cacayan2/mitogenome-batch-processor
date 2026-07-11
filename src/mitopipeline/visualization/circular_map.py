@@ -296,20 +296,20 @@ def render_circular_map_data(
     output_png = Path(
         output_png
     )
-
     output_svg = Path(
         output_svg
     )
-
     output_pdf = Path(
         output_pdf
     )
 
-    for output_path in [
+    output_paths = [
         output_png,
         output_svg,
         output_pdf,
-    ]:
+    ]
+
+    for output_path in output_paths:
         output_path.parent.mkdir(
             parents=True,
             exist_ok=True,
@@ -322,128 +322,142 @@ def render_circular_map_data(
         )
     )
 
-    axes.set_aspect(
-        "equal"
-    )
-
-    axes.axis(
-        "off"
-    )
-
-    outer_radius = 1.0
-    forward_radius = 1.0
-    reverse_radius = 0.86
-    feature_width = 0.10
-
-    # Backbone.
-    backbone = patches.Circle(
-        (
-            0,
-            0,
-        ),
-        radius=outer_radius,
-        fill=False,
-        linewidth=1.0,
-        color="black",
-    )
-
-    axes.add_patch(
-        backbone
-    )
-
-    for feature in map_data.features:
-        radius = (
-            forward_radius
-            if feature.strand != "-"
-            else reverse_radius
+    try:
+        axes.set_aspect(
+            "equal"
+        )
+        axes.axis(
+            "off"
         )
 
-        draw_feature_arc(
+        outer_radius = 1.0
+        forward_radius = 1.0
+        reverse_radius = 0.86
+        feature_width = 0.10
+
+        backbone = patches.Circle(
+            (
+                0,
+                0,
+            ),
+            radius=outer_radius,
+            fill=False,
+            linewidth=1.0,
+            color="black",
+        )
+
+        axes.add_patch(
+            backbone
+        )
+
+        # Draw every normalized segment. Origin-crossing features have two
+        # segments and therefore produce two arcs.
+        for feature in map_data.features:
+            radius = (
+                forward_radius
+                if feature.strand != "-"
+                else reverse_radius
+            )
+
+            draw_feature_arc(
+                axes=axes,
+                feature=feature,
+                genome_length=map_data.genome_length,
+                radius=radius,
+                width=feature_width,
+            )
+
+        # Draw only one label for each logical feature. Segment suffixes were
+        # added by build_circular_map_data() when a feature crossed the origin.
+        labeled_feature_ids: set[str] = set()
+
+        for feature in map_data.features:
+            logical_feature_id = feature.feature_id.split(
+                ":origin-",
+                maxsplit=1,
+            )[0]
+
+            if logical_feature_id in labeled_feature_ids:
+                continue
+
+            label_radius = (
+                1.18
+                if feature.strand != "-"
+                else 0.72
+            )
+
+            draw_feature_label(
+                axes=axes,
+                feature=feature,
+                genome_length=map_data.genome_length,
+                radius=label_radius,
+            )
+
+            labeled_feature_ids.add(
+                logical_feature_id
+            )
+
+        draw_tick_labels(
             axes=axes,
-            feature=feature,
             genome_length=map_data.genome_length,
-            radius=radius,
-            width=feature_width,
+            radius=outer_radius,
         )
 
-    # Draw labels after arcs so text is on top.
-    for feature in map_data.features:
-        label_radius = (
-            1.18
-            if feature.strand != "-"
-            else 0.72
+        draw_legend(
+            axes
         )
 
-        draw_feature_label(
-            axes=axes,
-            feature=feature,
-            genome_length=map_data.genome_length,
-            radius=label_radius,
+        axes.text(
+            0,
+            0.08,
+            map_data.sample_id,
+            fontsize=14,
+            fontweight="bold",
+            ha="center",
+            va="center",
         )
 
-    draw_tick_labels(
-        axes=axes,
-        genome_length=map_data.genome_length,
-        radius=outer_radius,
-    )
+        axes.text(
+            0,
+            -0.05,
+            (
+                f"{map_data.genome_length:,} bp"
+                f"\nGC {map_data.gc_content_percent:.2f}%"
+            ),
+            fontsize=9,
+            ha="center",
+            va="center",
+        )
 
-    draw_legend(
-        axes
-    )
+        axes.set_xlim(
+            -1.45,
+            1.45,
+        )
+        axes.set_ylim(
+            -1.45,
+            1.45,
+        )
 
-    axes.text(
-        0,
-        0.08,
-        map_data.sample_id,
-        fontsize=14,
-        fontweight="bold",
-        ha="center",
-        va="center",
-    )
+        figure.tight_layout()
 
-    axes.text(
-        0,
-        -0.05,
-        (
-            f"{map_data.genome_length:,} bp"
-            f"\nGC {map_data.gc_content_percent:.2f}%"
-        ),
-        fontsize=9,
-        ha="center",
-        va="center",
-    )
+        figure.savefig(
+            output_svg,
+            bbox_inches="tight",
+        )
+        figure.savefig(
+            output_pdf,
+            bbox_inches="tight",
+        )
+        figure.savefig(
+            output_png,
+            dpi=dpi,
+            bbox_inches="tight",
+        )
 
-    axes.set_xlim(
-        -1.45,
-        1.45,
-    )
-
-    axes.set_ylim(
-        -1.45,
-        1.45,
-    )
-
-    figure.tight_layout()
-
-    figure.savefig(
-        output_svg,
-        bbox_inches="tight",
-    )
-
-    figure.savefig(
-        output_pdf,
-        bbox_inches="tight",
-    )
-
-    figure.savefig(
-        output_png,
-        dpi=dpi,
-        bbox_inches="tight",
-    )
-
-    plt.close(
-        figure
-    )
+    finally:
+        plt.close(
+            figure
+        )
 
     validate_visualization_outputs(
         png_path=output_png,
@@ -454,8 +468,8 @@ def render_circular_map_data(
 
     if logger is not None:
         logger.info(
-            f"Rendered circular mitochondrial genome map for "
-            f"{map_data.sample_id}."
+            "Rendered circular mitochondrial genome map for %s.",
+            map_data.sample_id,
         )
 
 

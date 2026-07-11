@@ -45,6 +45,57 @@ class GenomeFeature:
             self
         )
 
+def split_origin_crossing_feature(
+        feature: GenomeFeature,
+        genome_length: int,
+) -> list[GenomeFeature]:
+    """Split a feature crossing the circular genome origin.
+
+    MITOS2 may represent an origin-crossing feature with an end coordinate
+    greater than the linear FASTA length. Convert it into two drawable
+    segments while preserving its biological identity.
+    """
+    if feature.start < 1:
+        raise ValueError(
+            f"Feature {feature.label} has invalid start coordinate "
+            f"{feature.start}."
+        )
+
+    if feature.start > genome_length:
+        raise ValueError(
+            f"Feature {feature.label} starts beyond the FASTA genome "
+            f"length ({genome_length} bp)."
+        )
+
+    if feature.end <= genome_length:
+        return [feature]
+
+    wrapped_end = feature.end - genome_length
+
+    if wrapped_end < 1 or wrapped_end > genome_length:
+        raise ValueError(
+            f"Feature {feature.label} has invalid circular coordinates "
+            f"{feature.start}-{feature.end} for a {genome_length} bp genome."
+        )
+
+    return [
+        GenomeFeature(
+            feature_id=f"{feature.feature_id}:origin-left",
+            feature_type=feature.feature_type,
+            start=feature.start,
+            end=genome_length,
+            strand=feature.strand,
+            label=feature.label,
+        ),
+        GenomeFeature(
+            feature_id=f"{feature.feature_id}:origin-right",
+            feature_type=feature.feature_type,
+            start=1,
+            end=wrapped_end,
+            strand=feature.strand,
+            label=feature.label,
+        ),
+    ]
 
 @dataclass(frozen=True)
 class CircularGenomeMapData:
@@ -425,9 +476,17 @@ def build_circular_map_data(
         fasta_path: str | Path,
         logger: logging.Logger | None = None,
 ) -> CircularGenomeMapData:
-    """Build parsed circular genome map data from MITOS2 outputs."""
-    sequence_id, genome_length, gc_content_percent = read_visualization_fasta(
-        fasta_path
+    """Build normalized data for a circular mitochondrial genome map.
+
+    MITOS2 can represent a feature crossing the circular origin by allowing
+    its end coordinate to exceed the length of the linear FASTA record. Such
+    a feature is converted into two drawable segments while preserving its
+    label, strand, and logical feature identifier.
+    """
+    sequence_id, genome_length, gc_content_percent = (
+        read_visualization_fasta(
+            fasta_path
+        )
     )
 
     features = parse_visualization_gff(
@@ -435,29 +494,99 @@ def build_circular_map_data(
         logger=logger,
     )
 
-    out_of_bounds = [
-        feature
-        for feature in features
-        if feature.end > genome_length
-    ]
+    normalized_features: list[GenomeFeature] = []
 
-    if out_of_bounds:
-        names = ", ".join(
-            feature.label
-            for feature in out_of_bounds[:5]
+    for feature in features:
+        if feature.start < 1:
+            raise ValueError(
+                f"Feature {feature.label} has an invalid start coordinate "
+                f"({feature.start})."
+            )
+
+        if feature.end < feature.start:
+            raise ValueError(
+                f"Feature {feature.label} has an invalid coordinate range "
+                f"({feature.start}-{feature.end})."
+            )
+
+        if feature.start > genome_length:
+            raise ValueError(
+                f"Feature {feature.label} starts beyond the FASTA genome "
+                f"length ({genome_length} bp): "
+                f"{feature.start}-{feature.end}."
+            )
+
+        # Ordinary feature contained within the linear FASTA coordinates.
+        if feature.end <= genome_length:
+            normalized_features.append(
+                feature
+            )
+            continue
+
+        # MITOS2 origin-crossing feature. For example, on a 16,561 bp
+        # genome, 16,540-16,608 becomes 16,540-16,561 and 1-47.
+        wrapped_end = feature.end - genome_length
+
+        if wrapped_end < 1 or wrapped_end > genome_length:
+            raise ValueError(
+                f"Feature {feature.label} has invalid circular coordinates "
+                f"({feature.start}-{feature.end}) for a "
+                f"{genome_length} bp genome."
+            )
+
+        ending_segment = GenomeFeature(
+            feature_id=f"{feature.feature_id}:origin-end",
+            feature_type=feature.feature_type,
+            start=feature.start,
+            end=genome_length,
+            strand=feature.strand,
+            label=feature.label,
         )
 
-        raise ValueError(
-            "One or more GFF features exceed the FASTA genome "
-            f"length ({genome_length} bp): {names}."
+        beginning_segment = GenomeFeature(
+            feature_id=f"{feature.feature_id}:origin-start",
+            feature_type=feature.feature_type,
+            start=1,
+            end=wrapped_end,
+            strand=feature.strand,
+            label=feature.label,
         )
+
+        normalized_features.extend(
+            [
+                beginning_segment,
+                ending_segment,
+            ]
+        )
+
+        if logger is not None:
+            logger.info(
+                "Split origin-crossing feature %s (%d-%d) into "
+                "%d-%d and %d-%d.",
+                feature.label,
+                feature.start,
+                feature.end,
+                ending_segment.start,
+                ending_segment.end,
+                beginning_segment.start,
+                beginning_segment.end,
+            )
+
+    normalized_features.sort(
+        key=lambda feature: (
+            feature.start,
+            feature.end,
+            feature.feature_type,
+            feature.label,
+        )
+    )
 
     return CircularGenomeMapData(
         sample_id=sample_id,
         genome_length=genome_length,
         sequence_id=sequence_id,
         gc_content_percent=gc_content_percent,
-        features=features,
+        features=normalized_features,
         gff_path=Path(
             gff_path
         ).expanduser().resolve(),
