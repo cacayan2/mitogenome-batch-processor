@@ -6,6 +6,7 @@ __pycache__/
 .snakemake
 tests/fixtures/outputs/
 tests/fixtures/fastq_real/
+tests/fixtures/fastq_fake/
 tests/fixtures/sra_cache/
 tests/fixtures/logs/
 fasterq.tmp.*/

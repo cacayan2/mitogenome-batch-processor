@@ -1,6 +1,6 @@
 output_root: /mnt/e/outputs_real
 manifest: null
-input_directory: tests/fixtures/fastq_real
+input_directory: tests/fixtures/fastq_fake
 job_id: test_job_big
 validate_input_files: true
 
