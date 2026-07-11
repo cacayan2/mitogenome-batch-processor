@@ -1,4 +1,4 @@
-"""Top BLAST-hit selection rule."""
+"""Top BLAST-hit selection and taxonomy-enrichment rule."""
 
 from pathlib import Path
 
@@ -25,6 +25,12 @@ rule select_blast_hits:
             "maximum_matches",
             6,
         ),
+        entrez_email=config["tools"]["blast"]["entrez_email"],
+        entrez_api_key_arg=lambda wildcards: (
+            f"--entrez-api-key {config['blast']['entrez_api_key']}"
+            if config["tools"]["blast"].get("entrez_api_key")
+            else ""
+        ),
         log_file=str(
             (
                 Path.cwd()
@@ -41,12 +47,14 @@ rule select_blast_hits:
     shell:
         """
         python -m mitopipeline.exec.parse_blast_hits \
-            --sample-id {wildcards.sample} \
+            --sample-id {wildcards.sample:q} \
             --blast-results {input.blast_results:q} \
             --output-file {output.matches:q} \
             --maximum-matches {params.maximum_matches} \
+            --entrez-email {params.entrez_email:q} \
+            --entrez-api-key {params.entrez_api_key:q} \
             --log-file {params.log_file:q}
 
-        test -e {output.matches:q}
+        test -s {output.matches:q}
         touch {output.done:q}
         """
