@@ -1,7 +1,7 @@
 output_root: /mnt/e/outputs_real
 manifest: null
 input_directory: tests/fixtures/fastq_real
-job_id: test_job_big
+job_id: test_job_big2
 validate_input_files: true
 
 stages: # Select which stages to run (true/false) - mostly for debugging purposes.
