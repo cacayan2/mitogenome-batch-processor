@@ -7,23 +7,45 @@ from pathlib import Path
 
 from mitopipeline.logging.logger_factory import make_logger
 from mitopipeline.reporting.markdown_report import write_sample_report
-from mitopipeline.reporting.report_data import (
-    collect_sample_report_data,
-)
+from mitopipeline.reporting.report_data import collect_sample_report_data
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description=(
-            "Generate one Markdown report from existing "
-            "MitoPipeline outputs."
-        )
+        description="Generate one Markdown report from pipeline outputs."
     )
     parser.add_argument("--sample-id", required=True)
     parser.add_argument("--job-directory", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--log-file", required=True)
     return parser.parse_args()
+
+
+def remove_duplicate_markdown_sections(
+    report_text: str,
+    headings: tuple[str, ...],
+) -> str:
+    """Remove repeated top-level report sections, keeping the first."""
+    lines = report_text.splitlines()
+    output: list[str] = []
+    seen: set[str] = set()
+    index = 0
+
+    while index < len(lines):
+        line = lines[index]
+
+        if line in headings:
+            if line in seen:
+                index += 1
+                while index < len(lines) and not lines[index].startswith("## "):
+                    index += 1
+                continue
+            seen.add(line)
+
+        output.append(line)
+        index += 1
+
+    return "\n".join(output).rstrip() + "\n"
 
 
 def main() -> int:
@@ -37,27 +59,25 @@ def main() -> int:
             log_file_path=args.log_file,
         )
 
-        logger.info(
-            "[%s] Collecting report data.",
-            args.sample_id,
-        )
-
         report_data = collect_sample_report_data(
             sample_id=args.sample_id,
             job_directory=Path(args.job_directory),
             logger=logger,
         )
-
-        logger.info(
-            "[%s] Rendering %d retained manifest metadata fields.",
-            args.sample_id,
-            len(report_data.metadata),
-        )
-
         output_path = write_sample_report(
             report_data=report_data,
             output_path=Path(args.output),
         )
+
+        report_text = output_path.read_text(encoding="utf-8")
+        report_text = remove_duplicate_markdown_sections(
+            report_text=report_text,
+            headings=(
+                "## Annotation",
+                "## Closest BLAST matches",
+            ),
+        )
+        output_path.write_text(report_text, encoding="utf-8")
 
         logger.info(
             "[%s] Wrote sample report to %s.",

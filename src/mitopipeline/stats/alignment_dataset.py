@@ -11,30 +11,6 @@ from typing import Callable, TextIO
 from Bio import Entrez, SeqIO
 from Bio.SeqRecord import SeqRecord
 
-<<<<<<< HEAD
-def infer_scientific_name_from_record(
-    record: SeqRecord,
-    accession: str,
-) -> str:
-    """Infer a binomial scientific name from an NCBI FASTA description."""
-    description = record.description.strip()
-
-    if description.startswith(accession):
-        description = description[len(accession):].strip()
-
-    # NCBI mitochondrial FASTA titles generally begin with:
-    # Genus species mitochondrion, complete genome
-    match = re.match(
-        r"([A-Z][a-zA-Z.-]+)\s+([a-z][a-zA-Z.-]+)",
-        description,
-    )
-
-    if match is None:
-        return "unknown_species"
-
-    return f"{match.group(1)} {match.group(2)}"
-=======
->>>>>>> 2dbd31d19b93d6cf32530c7dd83f07fd45eed98a
 
 def parse_top_blast_hits(
     top_hits_path: str | Path,
@@ -113,6 +89,43 @@ def normalize_blast_accession(
     return accession
 
 
+def scientific_name_is_missing(value: object) -> bool:
+    """Return whether a scientific name is absent or a placeholder."""
+    return str(value or "").strip().lower() in {
+        "",
+        "n/a",
+        "na",
+        "none",
+        "null",
+        "unknown",
+        "unknown_species",
+        "not available",
+    }
+
+
+def infer_scientific_name_from_record(
+    record: SeqRecord,
+    accession: str,
+) -> str:
+    """Infer a scientific name from NCBI record metadata or description."""
+    organism = str(record.annotations.get("organism", "")).strip()
+    if not scientific_name_is_missing(organism):
+        return organism
+
+    description = record.description.strip()
+    if description.startswith(accession):
+        description = description[len(accession):].strip()
+
+    match = re.match(
+        r"^([A-Z][A-Za-z.-]+)\s+([a-z][A-Za-z.-]+)",
+        description,
+    )
+    if match is None:
+        return "unknown_species"
+
+    return f"{match.group(1)} {match.group(2)}"
+
+
 def standardize_sequence_name(value: str) -> str:
     """Standardize text for safe use in a FASTA identifier."""
     value = value.strip()
@@ -133,15 +146,12 @@ def build_reference_sequence_name(
     accession: str,
     scientific_name: str,
 ) -> str:
-    """Build a species-first reference identifier for readable tree tips."""
+    """Build a readable, unique reference identifier for tree tips."""
+    del rank
     standardized_accession = standardize_sequence_name(accession)
     standardized_name = standardize_sequence_name(scientific_name)
 
-    return (
-        f"{standardized_name}"
-        f"|{standardized_accession}"
-        f"|reference_{rank:02d}"
-    )
+    return f"{standardized_name}__{standardized_accession}"
 
 
 def read_assembled_genome(
@@ -253,30 +263,12 @@ def order_and_standardize_reference_sequences(
             )
 
         record = record[:]
-<<<<<<< HEAD
-        scientific_name = (
-            match.get("sscinames")
-            or ""
-        ).strip()
-
-        missing_species_values = {
-            "",
-            "n/a",
-            "na",
-            "none",
-            "unknown",
-            "unknown_species",
-            "not available",
-        }
-
-        if scientific_name.lower() in missing_species_values:
+        scientific_name = str(match.get("sscinames") or "").strip()
+        if scientific_name_is_missing(scientific_name):
             scientific_name = infer_scientific_name_from_record(
                 record=record,
                 accession=accession,
             )
-=======
-        scientific_name = match.get("sscinames") or "unknown_species"
->>>>>>> 2dbd31d19b93d6cf32530c7dd83f07fd45eed98a
         record.id = build_reference_sequence_name(
             rank=match["rank"],
             accession=accession,

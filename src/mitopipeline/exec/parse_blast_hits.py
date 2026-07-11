@@ -1,9 +1,7 @@
-"""parse_blast_hits.py
+"""Execution layer for selecting and taxonomically enriching BLAST hits."""
 
-Execution layer for selecting top BLAST matches.
-"""
+from __future__ import annotations
 
-# Imports
 import argparse
 from pathlib import Path
 
@@ -13,85 +11,60 @@ from mitopipeline.stats.blast_stats import (
     select_top_blast_matches,
     write_top_blast_matches,
 )
+from mitopipeline.stats.blast_taxonomy import (
+    enrich_blast_scientific_names,
+)
 
 
 def parse_args() -> argparse.Namespace:
-    """Parse command-line arguments.
-
-    Returns:
-        argparse.Namespace: Parsed arguments.
-    """
+    """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="Select top BLAST matches for phylogenetic validation."
+        description=(
+            "Select top BLAST matches and resolve missing scientific names."
+        )
     )
-
-    parser.add_argument(
-        "--sample-id",
-        required=True,
-        help="Pipeline sample identifier.",
-    )
-    parser.add_argument(
-        "--blast-results",
-        required=True,
-        help="Path to BLAST TSV results.",
-    )
-    parser.add_argument(
-        "--output-file",
-        required=True,
-        help="Path to the selected-hit TSV output.",
-    )
-    parser.add_argument(
-        "--maximum-matches",
-        type=int,
-        default=6,
-        help="Maximum number of unique BLAST matches retained.",
-    )
-    parser.add_argument(
-        "--log-file",
-        required=True,
-        help="Path to execution log.",
-    )
-
+    parser.add_argument("--sample-id", required=True)
+    parser.add_argument("--blast-results", required=True)
+    parser.add_argument("--output-file", required=True)
+    parser.add_argument("--maximum-matches", type=int, default=6)
+    parser.add_argument("--entrez-email", required=True)
+    parser.add_argument("--entrez-api-key", default=None)
+    parser.add_argument("--log-file", required=True)
     return parser.parse_args()
 
 
 def main() -> int:
-    """Parse, rank, and write top BLAST matches.
-
-    Returns:
-        int: Exit code.
-    """
-    # Initializing logger.
+    """Parse, rank, enrich, and write top BLAST matches."""
     logger = None
 
     try:
-        # Parsing command-line arguments.
         args = parse_args()
-
-        # Constructing logger.
         logger = make_logger(
             name="blast_hits",
             log_file_path=args.log_file,
         )
 
-        # Logging start.
         logger.info(
-            f"Selecting top BLAST matches for sample {args.sample_id}."
+            "Selecting top BLAST matches for sample %s.",
+            args.sample_id,
         )
 
-        # Parsing BLAST TSV.
         matches = parse_blast_tsv(
             blast_path=Path(args.blast_results),
             logger=logger,
         )
-
-        # Selecting top BLAST matches.
         selected_matches = select_top_blast_matches(
             matches=matches,
             maximum_matches=args.maximum_matches,
+            logger=logger,
+        )
+        selected_matches = enrich_blast_scientific_names(
+            matches=selected_matches,
+            entrez_email=args.entrez_email,
+            entrez_api_key=args.entrez_api_key,
+            logger=logger,
         )
 
-        # Writing top BLAST matches.
         write_top_blast_matches(
             matches=selected_matches,
             output_path=Path(args.output_file),
@@ -99,31 +72,28 @@ def main() -> int:
             logger=logger,
         )
 
-        # Logging end warnings.
         if len(selected_matches) < args.maximum_matches:
             logger.warning(
-                f"Only {len(selected_matches)} unique BLAST matches were "
-                f"available for sample {args.sample_id}; "
-                f"{args.maximum_matches} were requested."
+                "Only %d unique BLAST matches were available for %s; "
+                "%d were requested.",
+                len(selected_matches),
+                args.sample_id,
+                args.maximum_matches,
             )
 
-        # Logging end.
         logger.info(
-            f"Selected {len(selected_matches)} BLAST matches for "
-            f"sample {args.sample_id}."
+            "Selected and enriched %d BLAST matches for sample %s.",
+            len(selected_matches),
+            args.sample_id,
         )
-
-        # Returning success.
         return 0
 
-    # Exception handling.
     except Exception as error:
-        # Logging error.
         if logger is not None:
             logger.exception(
-                f"BLAST match selection failed: {error}"
+                "BLAST match selection failed: %s",
+                error,
             )
-        # Returning failure.
         return 1
 
 
