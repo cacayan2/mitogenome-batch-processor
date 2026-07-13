@@ -19,13 +19,53 @@ from mitopipeline.reporting.report_data import collect_sample_report_data
 
 
 STAGE_DONE_PATHS = {
-    "qc_raw": ("qc", "raw", "{sample}.qc.raw.done"),
-    "trimming": ("trimming", "{sample}.trimming.done"),
-    "qc_trimmed": ("qc", "trimmed", "{sample}.qc.trimmed.done"),
-    "assembly": ("assembly", "{sample}.assembly.done"),
-    "annotation": ("annotation", "{sample}.annotation.done"),
-    "phylogeny": ("phylogeny", "figures", "{sample}.phylogeny.done"),
-    "reporting": ("reporting", "{sample}.report.md"),
+    "qc_raw": (
+        "qc",
+        "raw",
+        "{sample}",
+        "qc_raw.done",
+    ),
+    "trimming": (
+        "trimming",
+        "{sample}",
+        "trimming.done",
+    ),
+    "qc_trimmed": (
+        "qc",
+        "trimmed",
+        "{sample}",
+        "qc_trimmed.done",
+    ),
+    "assembly": (
+        "assembly",
+        "{sample}",
+        "assembly.done",
+    ),
+    "annotation": (
+        "annotation",
+        "{sample}",
+        "annotation.done",
+    ),
+    "visualization": (
+        "visualization",
+        "{sample}",
+        "visualization.done",
+    ),
+    "phylogeny": (
+        "phylogeny",
+        "{sample}",
+        "phylogeny.done",
+    ),
+    "reporting": (
+        "reporting",
+        "{sample}",
+        "report.md",
+    ),
+    "pdf_export": (
+        "reporting",
+        "{sample}",
+        "report.pdf",
+    ),
 }
 
 
@@ -177,19 +217,56 @@ def read_run_metadata(job_directory: str | Path) -> dict[str, Any]:
     return {}
 
 
-def build_run_output_paths(job_directory: str | Path) -> dict[str, Path]:
+def build_run_output_paths(
+        job_directory: str | Path,
+) -> dict[str, Path]:
     """Build known run-level output paths."""
-    job_directory = Path(job_directory)
-    return {
-        "runtime_manifest": job_directory / "validated_samples.tsv",
-        "run_report": job_directory / "reporting" / "run_report.md",
-        "reporting_directory": job_directory / "reporting",
-        "logs_directory": job_directory / "logs",
-        "assembly_directory": job_directory / "assembly",
-        "annotation_directory": job_directory / "annotation",
-        "phylogeny_directory": job_directory / "phylogeny",
-    }
+    job_directory = Path(
+        job_directory
+    )
 
+    return {
+        "runtime_manifest": (
+            job_directory
+            / "validated_samples.tsv"
+        ),
+        "run_report": (
+            job_directory
+            / "reporting"
+            / "run"
+            / "report.md"
+        ),
+        "run_report_pdf": (
+            job_directory
+            / "reporting"
+            / "run"
+            / "report.pdf"
+        ),
+        "reporting_directory": (
+            job_directory
+            / "reporting"
+        ),
+        "logs_directory": (
+            job_directory
+            / "logs"
+        ),
+        "assembly_directory": (
+            job_directory
+            / "assembly"
+        ),
+        "annotation_directory": (
+            job_directory
+            / "annotation"
+        ),
+        "visualization_directory": (
+            job_directory
+            / "visualization"
+        ),
+        "phylogeny_directory": (
+            job_directory
+            / "phylogeny"
+        ),
+    }
 
 def collect_run_report_data(
         job_id: str,
