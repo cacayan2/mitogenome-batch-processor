@@ -10,8 +10,15 @@ VISUALIZATION_CONFIG = (
 
 rule circular_genome_map:
     input:
-        gff=str(JOB_DIR / "annotation" / "{sample}" / "result.gff"),
-        fasta=str(JOB_DIR / "assembly" / "{sample}" / "data.fasta"),
+        gff=str(
+            JOB_DIR / "annotation" / "{sample}" / "result.gff"
+        ),
+        fasta=str(
+            JOB_DIR / "assembly" / "{sample}" / "selected.fasta"
+        ),
+        selection_done=str(
+            JOB_DIR / "assembly" / "{sample}" / "selection.done"
+        ),
         annotation_done=str(
             JOB_DIR / "annotation" / "{sample}" / "annotation.done"
         )
@@ -59,6 +66,8 @@ rule circular_genome_map:
 
     shell:
         """
+        set -euo pipefail
+        
         python -m mitopipeline.exec.generate_circular_genome_map \
             --sample-id {wildcards.sample} \
             --gff {input.gff:q} \

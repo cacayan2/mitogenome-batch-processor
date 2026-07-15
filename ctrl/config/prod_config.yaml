@@ -52,7 +52,7 @@ tools:
     disable_trim_poly_g: false # Disable trimming of poly-G tails.
     trim_poly_x: false # Trim poly-X tails from reads (common in Illumina NovaSeq data).
   getorganelle: # Options for GetOrganelle.
-    threads: 16 # Number of threads to use for GetOrganelle.
+    threads: 8 # Number of threads to use for GetOrganelle.
     database_type: animal_mt # Type of organelle database to use (e.g., animal_mt, plant_mt, etc.).
     initialize_database: true # Whether to initialize the organelle database.
     max_rounds: null # Maximum number of rounds for GetOrganelle assembly (null for default).
