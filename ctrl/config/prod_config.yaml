@@ -94,7 +94,7 @@ tools:
     refseqver: refseq89m # Reference sequence version for mitos2.
     zenodo_record: "4284483" # Zenodo record ID for mitos2 reference data.
     circular: true # Whether the mitochondrial genome is circular (true/false).
-    noplots: false # Whether to disable plot generation in mitos2 (true/false).
+    noplots: true # Whether to disable plot generation in mitos2 (true/false).
     best: false # Whether to use the "best" mode in mitos2 (true/false).
     ncbicode: false # Whether to use NCBI code for mitos2 (true/false).
     zip_output: false # Whether to create zipped output for mitos2 (true/false).

@@ -6,10 +6,10 @@ from pathlib import Path
 rule generate_alignment_dataset:
     input:
         assembly_fasta=str(
-            JOB_DIR / "assembly" / "{sample}" / "data.fasta"
+            JOB_DIR / "assembly" / "{sample}" / "selected.fasta"
         ),
         assembly_done=str(
-            JOB_DIR / "assembly" / "{sample}" / "assembly.done"
+            JOB_DIR / "assembly" / "{sample}" / "selection.done"
         ),
         top_hits=str(
             JOB_DIR / "phylogeny" / "{sample}" / "top_hits.tsv"
