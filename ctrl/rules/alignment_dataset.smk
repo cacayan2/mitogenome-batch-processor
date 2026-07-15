@@ -41,11 +41,16 @@ rule generate_alignment_dataset:
             ).resolve()
         )
 
+    resources:
+        entrez=1
+
     conda:
         "../../envs/mitopipeline.yaml"
 
     shell:
         """
+        set -euo pipefail
+
         python -m mitopipeline.exec.generate_alignment_dataset \
             --sample-id {wildcards.sample} \
             --assembly-fasta {input.assembly_fasta:q} \

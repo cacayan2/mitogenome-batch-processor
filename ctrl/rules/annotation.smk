@@ -111,6 +111,8 @@ rule annotation:
 
     shell:
         """
+        set -euo pipefail
+
         python -m mitopipeline.exec.run_mitos2 \
             --conda-env {params.conda_env:q} \
             --sample-id {wildcards.sample:q} \

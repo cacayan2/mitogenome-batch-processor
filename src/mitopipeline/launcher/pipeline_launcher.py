@@ -554,6 +554,8 @@ def run_snakemake(
         str(runtime_config),
         "--cores",
         str(cores),
+        "--resources",
+        "entrez=1"
     ]
 
     if use_conda:
