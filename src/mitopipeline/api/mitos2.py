@@ -7,6 +7,7 @@ from pathlib import Path
 import subprocess
 
 from mitopipeline.api.base_tool import BaseTool
+from mitopipeline.models.command_result import CommandResult
 
 
 class MITOS2Runner(BaseTool):
@@ -90,3 +91,46 @@ class MITOS2Runner(BaseTool):
             if result.returncode == 0:
                 return executable
         raise RuntimeError("Neither runmitos nor runmitos.py is available.")
+
+    def run(self) -> CommandResult:
+        """Run MITOS2 and tolerate failures limited to PNG generation."""
+        result = super().run()
+
+        if result.success:
+            return result
+
+        if not self.noplots:
+            return result
+
+        stderr = result.stderr or ""
+
+        plotting_failed = (
+            "drawmitos.py" in stderr
+            and "result.png" in stderr
+            and (
+                "libtiff.so.5" in stderr
+                or "reportlab" in stderr
+                or "ModuleNotFoundError: No module named 'Image'" in stderr
+            )
+        )
+
+        if not plotting_failed:
+            return result
+
+        try:
+            self.validate_outputs()
+        except (FileNotFoundError, ValueError):
+            return result
+
+        if self.logger is not None:
+            self.logger.warning(
+                "[%s] (mitos2) Annotation outputs were produced, but "
+                "MITOS2's optional PNG rendering failed. Treating the "
+                "annotation as successful.",
+                self.sample_id,
+            )
+
+        result.success = True
+        result.return_code = 0
+
+        return result

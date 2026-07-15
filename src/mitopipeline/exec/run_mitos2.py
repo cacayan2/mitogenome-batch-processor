@@ -36,7 +36,6 @@ def parse_args():
     parser.add_argument("--ncbicode", required=True)
     return parser.parse_args()
 
-
 def main():
     args = parse_args()
     logger = make_logger(f"mitos2.{args.sample_id}", args.log_file)
