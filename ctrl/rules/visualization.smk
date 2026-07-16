@@ -1,11 +1,9 @@
-"""Circular mitogenome visualization rule."""
+"""Completeness-aware circular mitogenome visualization rule."""
 
 from pathlib import Path
 
 
-VISUALIZATION_CONFIG = (
-    config.get("tools", {}).get("visualization", {})
-)
+VISUALIZATION_CONFIG = config.get("tools", {}).get("visualization", {})
 
 
 rule circular_genome_map:
@@ -15,6 +13,12 @@ rule circular_genome_map:
         ),
         fasta=str(
             JOB_DIR / "assembly" / "{sample}" / "selected.fasta"
+        ),
+        assessment=str(
+            JOB_DIR
+            / "assembly"
+            / "{sample}"
+            / "assembly_assessment.json"
         ),
         selection_done=str(
             JOB_DIR / "assembly" / "{sample}" / "selection.done"
@@ -67,9 +71,10 @@ rule circular_genome_map:
     shell:
         """
         set -euo pipefail
-        
-        python -m mitopipeline.exec.generate_circular_genome_map \
-            --sample-id {wildcards.sample} \
+
+        python -m mitopipeline.exec.render_assembly_visualization \
+            --sample-id {wildcards.sample:q} \
+            --assessment-json {input.assessment:q} \
             --gff {input.gff:q} \
             --fasta {input.fasta:q} \
             --output-png {output.png:q} \

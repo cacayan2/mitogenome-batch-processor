@@ -1,13 +1,11 @@
 """Build reviewable NCBI SRA metadata tables from runtime manifests."""
 
 from __future__ import annotations
-
 from pathlib import Path
 import logging
-
 import pandas as pd
 
-
+# Columns
 SRA_COLUMNS = [
     "sample_name",
     "library_ID",
@@ -43,7 +41,16 @@ REQUIRED_REVIEW_FIELDS = [
 
 
 def _clean(value: object) -> str:
-    """Return a normalized string, treating pandas missing values as blank."""
+    """Return a normalized string, treating pandas missing values as blank.
+    
+    Args:
+        value (object): Some object to normalize into a string.
+    
+    Returns:
+        str: The normalized string.
+    """
+    # Checks if the current value is na. If na, returns an empty string, 
+    # otherwise returns the cleaned string. 
     if pd.isna(value):
         return ""
     return str(value).strip()
@@ -54,12 +61,25 @@ def _first_value(
     names: tuple[str, ...],
     default: str = "",
 ) -> str:
-    """Return the first nonblank value found among candidate column names."""
+    """Return the first nonblank value found among candidate column names.
+    
+    Args: 
+        row (pd.Series): The row to be parsed.
+        names (tuple[str, ...]): The names of the columns of the row.
+        default: (str = ""): The default value if there is no nonblank value in the row (empty string). 
+    Returns: 
+        str: The string containing the first nonblank value. 
+    """
+    # Iterating through each of the column.
     for name in names:
+        # If the name corresponds to an index in the row,
         if name in row.index:
+            # obtain the value using the clean function.
             value = _clean(row[name])
+            # If there is a value, return it.
             if value:
                 return value
+    # Return the empty string otherwise. 
     return default
 
 

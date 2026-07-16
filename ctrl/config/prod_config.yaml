@@ -24,6 +24,16 @@ stages: # Select which stages to run (true/false) - mostly for debugging purpose
   archival_validation: false
   table2asn_validation: false
 
+assembly_assessment:
+  # Broad vertebrate/fish mitogenome screening interval. These are QC gates,
+  # not universal biological constants.
+  complete_min_length: 14000
+  complete_max_length: 22000
+
+  # Ignore extremely short BLAST-supported assembly debris when preserving
+  # mitochondrial fragments.
+  minimum_fragment_length: 200
+
 tools:
   fastp: # Options for fastp.
     threads: 8 # Number of threads to use for fastp.
