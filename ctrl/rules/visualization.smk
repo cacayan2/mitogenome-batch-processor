@@ -1,69 +1,27 @@
-"""Completeness-aware circular mitogenome visualization rule."""
+"""Completeness-aware visualization using the final rescue assessment."""
 
 from pathlib import Path
-
 
 VISUALIZATION_CONFIG = config.get("tools", {}).get("visualization", {})
 
 
 rule circular_genome_map:
     input:
-        gff=str(
-            JOB_DIR / "annotation" / "{sample}" / "result.gff"
-        ),
-        fasta=str(
-            JOB_DIR / "assembly" / "{sample}" / "selected.fasta"
-        ),
-        assessment=str(
-            JOB_DIR
-            / "assembly"
-            / "{sample}"
-            / "assembly_assessment.json"
-        ),
-        selection_done=str(
-            JOB_DIR / "assembly" / "{sample}" / "selection.done"
-        ),
-        annotation_done=str(
-            JOB_DIR / "annotation" / "{sample}" / "annotation.done"
-        )
+        gff=str(JOB_DIR / "annotation" / "{sample}" / "result.gff"),
+        fasta=str(JOB_DIR / "assembly" / "{sample}" / "resolved.fasta"),
+        assessment=str(JOB_DIR / "assembly" / "{sample}" / "final_assembly_assessment.json"),
+        rescue_done=str(JOB_DIR / "assembly" / "{sample}" / "rescue.done"),
+        annotation_done=str(JOB_DIR / "annotation" / "{sample}" / "annotation.done")
 
     output:
-        png=str(
-            JOB_DIR
-            / "visualization"
-            / "{sample}"
-            / "circular_mitogenome.png"
-        ),
-        svg=str(
-            JOB_DIR
-            / "visualization"
-            / "{sample}"
-            / "circular_mitogenome.svg"
-        ),
-        pdf=str(
-            JOB_DIR
-            / "visualization"
-            / "{sample}"
-            / "circular_mitogenome.pdf"
-        ),
-        done=str(
-            JOB_DIR
-            / "visualization"
-            / "{sample}"
-            / "visualization.done"
-        )
+        png=str(JOB_DIR / "visualization" / "{sample}" / "circular_mitogenome.png"),
+        svg=str(JOB_DIR / "visualization" / "{sample}" / "circular_mitogenome.svg"),
+        pdf=str(JOB_DIR / "visualization" / "{sample}" / "circular_mitogenome.pdf"),
+        done=str(JOB_DIR / "visualization" / "{sample}" / "visualization.done")
 
     params:
         dpi=VISUALIZATION_CONFIG.get("dpi", 600),
-        log_file=str(
-            (
-                Path.cwd()
-                / JOB_DIR
-                / "visualization"
-                / "{sample}"
-                / "visualization.log"
-            ).resolve()
-        )
+        log_file=str((Path.cwd() / JOB_DIR / "visualization" / "{sample}" / "visualization.log").resolve())
 
     conda:
         "../../envs/visualization.yaml"
@@ -71,7 +29,6 @@ rule circular_genome_map:
     shell:
         """
         set -euo pipefail
-
         python -m mitopipeline.exec.render_assembly_visualization \
             --sample-id {wildcards.sample:q} \
             --assessment-json {input.assessment:q} \
@@ -82,7 +39,6 @@ rule circular_genome_map:
             --output-pdf {output.pdf:q} \
             --dpi {params.dpi} \
             --log-file {params.log_file:q}
-
         test -s {output.png:q}
         test -s {output.svg:q}
         test -s {output.pdf:q}
