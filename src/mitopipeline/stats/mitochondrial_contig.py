@@ -210,14 +210,13 @@ def assess_mitochondrial_assembly(
         if len(evidence) == 1:
             reason = (
                 "One BLAST-supported contig falls within the configured "
-                "complete mitogenome length interval. Circularity remains a "
-                "candidate property until independently validated."
+                "complete mitogenome length interval."
             )
         else:
             reason = (
                 "The primary BLAST-supported contig falls within the complete "
                 "length interval; additional mitochondrial-like scaffolds were "
-                "retained for review."
+                "retained."
             )
     elif len(evidence) > 1:
         status = "fragmented"

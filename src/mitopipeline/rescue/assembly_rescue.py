@@ -196,10 +196,13 @@ def map_reads(reference: Path, r1: Path, r2: Path, output_dir: Path, threads: in
     if minimap.returncode or sort.returncode:
         return {"available": False, "reason": "minimap2/samtools mapping failed"}
     run(["samtools", "index", str(bam)])
-    coverage = run(["samtools", "coverage", str(bam)])
+    coverage = run(
+        ["samtools", "coverage", str(bam)],
+        stdout=subprocess.PIPE,
+    )
     depths: list[float] = []
     covered: list[float] = []
-    if coverage.returncode == 0:
+    if coverage.returncode == 0 and coverage.stdout:
         for line in coverage.stdout.splitlines():
             if line.startswith("#"):
                 continue
@@ -389,7 +392,7 @@ def run_megahit(r1: Path, r2: Path, output_dir: Path, threads: int, reference: P
         length=length,
         contig_count=count,
         n_fraction=n_fraction,
-        notes=["Independent MEGAHIT assembly; reference-filtered when a reference was available."],
+        notes=["This was constructed via MEGAHIT because no acceptable assembly was generated via GetOrganelle."],
     )
 
 
