@@ -1,7 +1,7 @@
 [project]
 name = "mitopipeline"
-version = "0.1.0"
-description = "Automated mitochondrial genome assembly, annotation, and reporting pipeline"
+version = "0.2.0"
+description = "Automated mitochondrial genome assembly, annotation, and reporting pipeline."
 requires-python = ">=3.11"
 
 dependencies = [

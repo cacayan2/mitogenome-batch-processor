@@ -1,1 +1,0 @@
-"""NCBI archival metadata helpers."""

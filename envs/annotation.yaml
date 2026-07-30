@@ -1,9 +1,0 @@
-name: mito-annotation
-channels:
-  - conda-forge
-  - bioconda
-dependencies:
-  - python=3.7
-  - mitos
-  - blast
-  - pip
