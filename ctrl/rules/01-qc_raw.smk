@@ -62,7 +62,7 @@ rule qc_raw:
         output_dir = str(JOB_DIR / "qc" / "raw" / "{sample}"),
         working_dir = str(Path.cwd()),
         log_file = str(JOB_DIR / "logs" / "qc" / "raw" / "{sample}.qc_raw.log"),
-        threads = config["tools"]["fastqc.raw"]["threads"]
+        threads = config["stage_options"]["qc.raw"]["fastqc"]["threads"]
     conda:
         "../../envs/qc.yaml"
     shell:

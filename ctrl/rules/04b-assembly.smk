@@ -7,6 +7,9 @@ Executes and validates GetOrganelle on trimmed data.
 # Imports
 from pathlib import Path
 
+# To make things easier, we'll subset the portion of the config related to GetOrganelle.
+GETORGANELLE_CONFIG = config["tools"]["getorganelle"]
+
 def getorganelle_database_input(config: dict) -> list[str]:
     """
     If the database needs to be initialized, returns a path to the database.done file,
@@ -17,13 +20,10 @@ def getorganelle_database_input(config: dict) -> list[str]:
     Returns:
         list[str]: A list containing either an empty string or path, depending on whether initialize_database is T/F. 
     """
-    # To make things easier, we'll subset the portion of the config related to GetOrganelle.
-    getorganelle_config = config["tools"]["getorganelle"]
-
-    if tool_config.get("initialize_database") is True:
+    if GETORGANELLE_CONFIG.get("initialize_database") is True:
         #TODO pass db_type into exec script and validate that it is present and an acceptable type.
         # Extracts the database type and returns the path to the database.
-        db_type = tool_config.get("database_type")
+        db_type = GETORGANELLE_CONFIG.get("database_type")
         return str(JOB_DIR / "setup" / "getorganelle" / f"{db_type}.done")
     # Returning a list with an empty string, which is generally safe for Snakemake input parsing.
     return [""]
@@ -38,9 +38,6 @@ def getorganelle_optional_args(config: dict) -> str:
     Returns:
         str: A string containing the optional command-line arguments to be appended.
     """
-    # To make things easier, we'll subset the portion of the config related to fastp.
-    fastp_config = config["tools"]["fastp"]
-    
     # We'll eventually return this but joined together.
     args = []
 
@@ -73,12 +70,12 @@ def getorganelle_optional_args(config: dict) -> str:
     # Now we iterate through each of the value options and
     # append values that are not None to args.
     for key, flag in value_options.items():
-        value = tool_config.get(key)
+        value = GETORGANELLE_CONFIG.get(key)
         if value is not None:
             args.append(f"{flag} {value}")
 
     # Dictionary mapping options that are boolean - the config name is mapped to the true flag passed to GetOrganelle.
-    # For more informatino about these flags, see GetOrganelle documentation or see this repository's README to view
+    # For more information about these flags, see GetOrganelle documentation or see this repository's README to view
     # how to configure config.yaml.
     boolean_options = {
         "overwrite": "--overwrite",
