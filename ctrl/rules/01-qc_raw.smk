@@ -7,6 +7,9 @@ Executes and validates FastQC on raw data.
 # Imports
 from pathlib import Path
 
+# To make things easier, we'll subset the portion of the config related to GetOrganelle.
+QC_RAW_CONFIG = config["stage_options"]["qc.raw"]["fastqc"]
+
 rule qc_raw:
     input: 
         """
@@ -62,7 +65,7 @@ rule qc_raw:
         output_dir = str(JOB_DIR / "qc" / "raw" / "{sample}"),
         working_dir = str(Path.cwd()),
         log_file = str(JOB_DIR / "logs" / "qc" / "raw" / "{sample}.qc_raw.log"),
-        threads = config["stage_options"]["qc.raw"]["fastqc"]["threads"]
+        threads = QC_RAW_CONFIG.get("threads")
     conda:
         "../../envs/qc.yaml"
     shell:

@@ -9,6 +9,9 @@ if not performing remote BLAST searches.
 from pathlib import Path
 import shlex
 
+# To make things easier, we'll subset the portion of the config related to blast database setup.
+BLAST_CONFIG = config["stage_options"]["assembly"]["blast"]
+
 def blast_setup_optional_args() -> str:
     """
     This function parses the config and checks for optional command-line arguments.
@@ -19,9 +22,6 @@ def blast_setup_optional_args() -> str:
     Returns:
         str: A string containing the optional command-line arguments to be appended.
     """
-    # To make things easier, we'll subset the portion of the config related to blast database setup.
-    blast_config = config["tools"]["blast"]
-
     # We start with an empty list. This will be eventually joined together and appended
     # to the rest of a command.
     args = []
@@ -38,7 +38,7 @@ def blast_setup_optional_args() -> str:
     # Now we iterate through each of the value options and
     # append values that are not None to args.
     for key, flag in value_options.items():
-        value = tool_config.get(key)
+        value = BLAST_CONFIG.get(key)
         if value is not None:
             args.append(f"{flag} {value}")
     

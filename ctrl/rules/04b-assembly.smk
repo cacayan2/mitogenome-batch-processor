@@ -8,7 +8,7 @@ Executes and validates GetOrganelle on trimmed data.
 from pathlib import Path
 
 # To make things easier, we'll subset the portion of the config related to GetOrganelle.
-GETORGANELLE_CONFIG = config["tools"]["getorganelle"]
+GETORGANELLE_CONFIG = config["stage_options"]["assembly"]["getorganelle"]
 
 def getorganelle_database_input(config: dict) -> list[str]:
     """
@@ -90,7 +90,7 @@ def getorganelle_optional_args(config: dict) -> str:
     # Now we iterate through each of the boolean options and
     # append values that are True to args.
     for key, flag in boolean_options.items():
-        if tool_config.get(key) is True:
+        if GETORGANELLE_CONFIG.get(key) is True:
             args.append(flag)
 
     # Then we join args and return - this will eventually be appended to the final command sent to the terminal.

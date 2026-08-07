@@ -7,6 +7,9 @@ Executes and validates FastQC on trimmed data.
 # Imports
 from pathlib import Path
 
+# To make things easier, we'll subset the portion of the config related to GetOrganelle.
+QC_TRIMMED_CONFIG = config["stage_options"]["qc.trimmed"]["fastqc"]
+
 rule qc_trimmed:
     input: 
         """
@@ -65,7 +68,7 @@ rule qc_trimmed:
         output_dir = str(JOB_DIR / "qc" / "trimmed" / "{sample}"),
         working_dir = str(Path.cwd()),
         log_file = str(JOB_DIR / "logs" / "qc" / "trimmed" / "{sample}.qc_raw.log"),
-        threads = config["tools"]["fastqc.trimmed"]["threads"]
+        threads = QC_TRIMMED_CONFIG.get("threads")
     shell:
         """
         python -m mitopipeline.exec.run_fastqc_trimmed \

@@ -8,6 +8,9 @@ Executes and validates trimming on raw data.
 from pathlib import Path
 from typing import Any
 
+# To make things easier, we'll subset the portion of the config related to fastp.
+FASTP_CONFIG = config["stage_options"]["trimming"]["fastp"]
+
 def fastp_optional_args(config: dict) -> str:
     """
     This function parses the config and checks for optional command-line arguments.
@@ -18,9 +21,6 @@ def fastp_optional_args(config: dict) -> str:
     Returns:
         str: A string containing the optional command-line arguments to be appended.
     """
-    # To make things easier, we'll subset the portion of the config related to fastp. 
-    fastp_config = config["tools"]["fastp"]
-    
     # We'll eventually return this but joined together. 
     args = []
     
@@ -44,7 +44,7 @@ def fastp_optional_args(config: dict) -> str:
     # Now we iterate through each of the value options and
     # append values that are not None to args.
     for key, flag in value_options.items():
-        value = fastp_config.get(key)
+        value = FASTP_CONFIG.get(key)
         if value is not None:
             args.append(f"{flag} {value}")
     
