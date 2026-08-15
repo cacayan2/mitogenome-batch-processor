@@ -15,18 +15,24 @@ REQUIRED_COLUMNS = ["sample_id", "r1", "r2"]
 
 def parse_sample_manifest(
         manifest_path: Path,
-        logger: logging.Logger | None = None
+        logger: logging.Logger | None = None,
+        input_directory: Path | None = None
 ) -> list[Sample]:
     """
     Parses a TSV manifest while retaining every nonblank column.
 
     Args:
         manifest_path (Path): The path to the manifest file.
-        logger (logging.Logger | None): Optional logger for logging messages.
+        logger (logging.Logger | None): Logger for logging messages.
+        input_directory (Path | None): The input directory where the fastq files live.
 
     Returns:
         list[Sample]: A list of Sample objects parsed from the manifest.
     """
+    # First, we normalize input_directory.
+    if input_directory is not None:
+        input_directory = Path(input_directory).expanduser().resolve()
+
     # First, we normalize the path to the manifest and check if it exists.
     manifest_path = Path(manifest_path).resolve()
     if not manifest_path.exists():
@@ -52,7 +58,7 @@ def parse_sample_manifest(
 
     # Here we verify that all required columns are present in the manifest. We subtract the set of required columns
     # from the set of columns in the manifest - if any remain, those are missing.
-    missing_columns = set(REQUIRED_COLUMNS - set(table.columns))
+    missing_columns = set(REQUIRED_COLUMNS) - set(table.columns)
     if missing_columns:
         if logger is not None: logger.error(f"Sample manifest file is missing required columns: {missing_columns}")
         raise ValueError(f"Sample manifest file is missing required columns: {missing_columns}")
@@ -91,8 +97,8 @@ def parse_sample_manifest(
             raise ValueError(f"Missing r2 at line {line_number} in manifest.")
 
         # Now we resolve the manifest paths to absolute paths.
-        r1_path = _resolve_manifest_path(r1_value, manifest_dir)
-        r2_path = _resolve_manifest_path(r2_value, manifest_dir)
+        r1_path = _resolve_manifest_path(value = r1_value, manifest_dir = manifest_dir, input_directory = input_directory)
+        r2_path = _resolve_manifest_path(value = r2_value, manifest_dir = manifest_dir, input_directory = input_directory)
 
         # Verifying if the paths lead to a file.
         if not r1_path.is_file():
@@ -154,13 +160,14 @@ def _row_metadata(row: pd.Series) -> dict[str, str]:
     # Finally, we return the metadata dictionary.
     return metadata
 
-def _resolve_manifest_path(value: str, manifest_dir: Path) -> Path:
+def _resolve_manifest_path(value: str, manifest_dir: Path, input_directory: Path | None = None) -> Path:
     """
     Resolves a path from the manifest, handling both absolute and relative paths.
 
     Args:
         value (str): The path value from the manifest.
         manifest_dir (Path): The directory of the manifest file.
+        input_directory (Path | None = None): The input directory.
 
     Returns:
         Path: The resolved path.
@@ -171,8 +178,15 @@ def _resolve_manifest_path(value: str, manifest_dir: Path) -> Path:
     # If the path is absolute, we resolve it.
     if path.is_absolute(): return path.resolve()
 
-    # If the path is relative, we resolve it relative to the manifest directory.
-    return (manifest_dir / path).resolve()
+    # Logic for dealing with a relative path.
+    ## 1. We resolve the relative path and return it if it is a dictionary.
+    ## 2. If not, we resolve the relative path to the input_directory and return it. 
+    manifest_relative = (manifest_dir / path).resolve()
+    if manifest_relative.is_file(): return manifest_relative
+    if input_directory is not None:
+        input_relative = (input_directory / path).resolve()
+        if input_relative.is_file(): return input_relative
+    return manifest_relative
 
 def _optional_value(metadata: dict[str, str], column_name: str) -> str | None:
     """

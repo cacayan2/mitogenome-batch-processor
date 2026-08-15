@@ -91,13 +91,14 @@ def make_logger(
         return logger
 
     # Now we format how messages look on the console.
-    console_formatter = logging.Formatter("[%(levelname)s] %(message)s")
+    console_formatter = logging.Formatter("[%(levelname)s] (%(name)s) %(message)s")
 
     # And now we format how messages look in the log file.
     file_formatter = logging.Formatter(
         ( 
-            "%(asctime)s | %(levelname)-8s | %(name)s | "
-            "%(process)d | %(threadName)s | %(message)s"
+            "[%(levelname)s] (%(name)s) | "
+            "%(asctime)s | %(process)d | %(threadName)s | "
+            "%(message)s"
         ), datefmt = "%Y-%m-%d %H:%M:%S"
     )
 
@@ -116,7 +117,7 @@ def make_logger(
     # 2. We set the level of the file handler to the file_level argument.
     # 3. We set the formatter of the file handler to the file_formatter we defined above.
     component_handler = logging.FileHandler(component_log, mode = "a", encoding = "utf-8")
-    component_handler.setLevel
+    component_handler.setLevel(file_level)
     component_handler.setFormatter(file_formatter)
 
     # Now we set up settings for the global log file. We do a number of things here:
@@ -124,7 +125,7 @@ def make_logger(
     # 2. We set the level of the file handler to the file_level argument.
     # 3. We set the formatter of the file handler to the file_formatter we defined
     global_handler = logging.FileHandler(global_log, mode = "a", encoding = "utf-8")
-    global_handler.setLevel(logging.DEBUG)
+    global_handler.setLevel(file_level)
     global_handler.setFormatter(file_formatter)
 
     # Finally we add the handlers to the logger.
