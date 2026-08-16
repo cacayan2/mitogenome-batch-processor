@@ -18,8 +18,8 @@ import pandas as pd
 import yaml
 import sys
 from mitopipeline.utils.manifest.manifest_parser import parse_sample_manifest
-from mitopipeline.models.pipeline_job import PipelineJob
-from mitopipeline.models.sample import Sample
+from mitopipeline.models.pipeline_job.pipeline_job import PipelineJob
+from mitopipeline.models.sample.sample import Sample
 
 def parse_args() -> argparse.Namespace:
     """
