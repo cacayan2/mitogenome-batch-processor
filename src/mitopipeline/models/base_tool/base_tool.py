@@ -166,8 +166,7 @@ class BaseTool(ABC):
 
         # Logic for dealing with different command result success states.
         self.logger.info(f"{context} Execution finished with return code {command_result.return_code} after {command_result.runtime_seconds} seconds.")
-        self.logger.debug(f"{context} stdout: {command_result.stdout}")
-        self.logger.debug(f"{context} stderr: {command_result.stderr}")
+        if command_result.stdout: self.logger.debug(f"{context} stdout:\n{command_result.stdout.rstrip()}")
         if not command_result.success:
             self.logger.error(f"{context} Execution failed with return code {command_result.return_code} after {command_result.runtime_seconds} seconds.")
             return command_result

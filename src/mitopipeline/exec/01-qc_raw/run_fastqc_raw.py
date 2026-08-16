@@ -46,4 +46,4 @@ def main() -> int:
     # Creating the logger.
     logger = make_logger(
         name = "fastqc_raw",
-        log_file_path = component_log_file,
+        log_file_path = args.log_file,
