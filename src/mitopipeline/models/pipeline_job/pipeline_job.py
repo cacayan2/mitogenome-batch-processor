@@ -137,8 +137,8 @@ class PipelineJob:
         # Returning the logger for the job.
         return make_logger(
             name = f"{self.job_id}.job",
-            log_file_path = self.job_dir / "logs" / "00-job" / f"{self.job_id}.job.log",
-            global_log_file_path = self.job_dir / "logs" / "00-job" / f"{self.job_id}.job.log",
+            log_file_path = self.job_dir / "logs" / f"{self.job_id}.job.log",
+            global_log_file_path = self.job_dir / "logs" / "00-job" / f"{self.job_id}.global.log",
             console_level = logging.INFO,
             file_level = logging.DEBUG
         )

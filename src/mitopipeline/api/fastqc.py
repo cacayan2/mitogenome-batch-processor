@@ -18,8 +18,17 @@ class FastQCRunner(BaseTool):
     """
     This class provides the functionality to run FastQC and normalize I/O 
     within a single sample directory. 
+
+    Attributes:
+        working_dir (Path): The path to the directory of the input files.
+        output_dir (Path): The directory to save the output files to.
+        sample (Sample): The sample object that is being worked with.
+        r1_output_stem (str): The stem of the R1 file - this will be appended to with file extensions for the outputs.
+        r2_output_stem (str): The stem of the R2 file - this will be appended to with file extensions for the outputs.
+        logger (Logger): The logger to use for this of the pipeline.
+        tool_name (str): The name of the tool (by default will be fastqc).
+        threads (int): The number of the threads for this process to use.
     """
-    
     def __init__(self,
                  working_dir: Path,
                  output_dir: Path,
@@ -43,6 +52,7 @@ class FastQCRunner(BaseTool):
             logger (Logger): The logger to use for this of the pipeline.
             tool_name (str): The name of the tool (by default will be fastqc).
             threads (int): The number of the threads for this process to use.
+            
         Returns: 
             None
         """
