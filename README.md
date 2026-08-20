@@ -1,12 +1,12 @@
-# MitoPipeline
+# Mitopipeline
 
-MitoPipeline is a reproducible Snakemake/Python workflow for recovering and analyzing mitochondrial genomes from paired-end whole-genome sequencing reads. Version 0.1.0 was developed for a fish mitogenomics dataset of approximately 140 samples, with an emphasis on reproducibility, error handling, event reporting, and portability to future datasets.
+Mitopipeline is a reproducible Snakemake/Python workflow for recovering and analyzing mitochondrial genomes from paired-end whole-genome sequencing reads. Version 0.1.0 was developed for a fish mitogenomics dataset of approximately 140 samples, with an emphasis on reproducibility, error handling, event reporting, and portability to future datasets.
 
 > **Status:** v0.1.0 is a functional research pipeline and development foundation. It has been exercised on real sequencing data, but difficult assemblies, rescue behavior, full-dataset validation, and archival/submission workflows remain areas of active development.
 
 ## Features
 
-MitoPipeline integrates the major stages of mitogenome analysis into a single configurable workflow:
+Mitopipeline integrates the major stages of mitogenome analysis into a single configurable workflow:
 
 - **Raw-read quality control** with FastQC
 - **Read filtering and trimming** with fastp
@@ -26,7 +26,7 @@ MitoPipeline integrates the major stages of mitogenome analysis into a single co
 
 ## Requirements
 
-MitoPipeline v0.1.0 requires **Python 3.11 or newer**. The Python package declares the following dependencies:
+Mitopipeline v0.1.0 requires **Python 3.11 or newer**. The Python package declares the following dependencies:
 
 - pandas
 - openpyxl
@@ -127,7 +127,7 @@ The launcher validates/discovers the sample inputs, creates a job-specific runti
 
 ## Running your own paired-end FASTQ data
 
-MitoPipeline can operate from either a sample manifest or an input directory containing paired FASTQ files.
+Mitopipeline can operate from either a sample manifest or an input directory containing paired FASTQ files.
 
 The minimum manifest fields are:
 
@@ -182,7 +182,7 @@ Each run is organized beneath its configured output root and job ID. Depending o
 └── submission/
 ```
 
-The launcher also creates job-level runtime metadata, including a validated sample manifest and runtime configuration. Stage completion files and structured outputs allow Snakemake and MitoPipeline to track what has been produced and what still needs to run.
+The launcher also creates job-level runtime metadata, including a validated sample manifest and runtime configuration. Stage completion files and structured outputs allow Snakemake and Mitopipeline to track what has been produced and what still needs to run.
 
 ## Configuration
 
