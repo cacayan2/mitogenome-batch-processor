@@ -41,7 +41,7 @@ The complete workflow also relies on external bioinformatics tools/environments 
 ## Repository layout
 
 ```text
-mitogenome-batch-processor/
+mitopipeline/
 ├── ctrl/
 │   ├── Snakefile              # top-level Snakemake workflow
 │   ├── config/                # runtime/testing configuration and manifests
@@ -58,8 +58,8 @@ mitogenome-batch-processor/
 Clone the repository and switch to v0.1.0:
 
 ```bash
-git clone https://github.com/cacayan2/mitogenome-batch-processor.git
-cd mitogenome-batch-processor
+git clone https://github.com/cacayan2/mitopipeline.git
+cd mitopipeline
 git checkout feature/version-0.1.0
 ```
 
